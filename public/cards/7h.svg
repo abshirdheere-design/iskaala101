@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="450" viewBox="0 0 300 450">
+            <rect width="294" height="444" x="3" y="3" rx="20" ry="20" fill="white" stroke="#333" stroke-width="3" />
+            
+            <g fill="#D40000">
+                <text x="20" y="50" font-size="45" font-weight="bold" font-family="Arial">7</text>
+                <text x="20" y="90" font-size="35" font-family="Arial">♥</text>
+            </g>
+            <g fill="#D40000" transform="rotate(180, 150, 225)">
+                <text x="20" y="50" font-size="45" font-weight="bold" font-family="Arial">7</text>
+                <text x="20" y="90" font-size="35" font-family="Arial">♥</text>
+            </g>
+            <text x="90" y="160" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="210" y="160" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="90" y="240" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="210" y="240" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="90" y="320" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="210" y="320" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+<text x="150" y="200" font-size="65" text-anchor="middle" fill="#D40000">♥</text>
+
+        </svg>

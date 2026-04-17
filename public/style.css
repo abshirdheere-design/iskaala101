@@ -1,0 +1,928 @@
+/* ================= MODALS & SETUP ================= */
+.modal {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 10000;
+}
+
+.modal-content {
+    background: #2c3e50;
+    padding: 30px;
+    border-radius: 15px;
+    text-align: center;
+    border: 2px solid #f1c40f;
+}
+
+/* ================= RESET & BASE ================= */
+* { 
+    margin: 0; 
+    padding: 0; 
+    box-sizing: border-box; 
+}
+
+body {
+    background: #0f171a;
+    font-family: sans-serif;
+    color: white;
+
+    overflow: hidden; /* 🔥 HALKAN SAX */
+}
+
+/* ================= GAME HEADER ================= */
+.game-header {
+    display: none; /* JS ayaa ka dhigi doona flex */
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 2px solid #f1c40f;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9500; /* Ka sarreeya wax kasta marka ciyaartu socoto */
+}
+
+/* ================= MY HAND SECTION ================= */
+.player-hand-section {
+    position: fixed;
+    bottom: 45px; /* Kor ayuu uga yara fogaanayaa salka hoose */
+    left: 0;
+    right: 0;
+    display: none; /* 🔥 BILOWGA MA MUUQANAYO - Tani waa xalka sawirkaaga */
+    flex-direction: column;
+    align-items: center;
+    z-index: 9999 !important;
+    pointer-events: none;
+}
+
+/* Badhamada iyo kaararka uun ha la taaban karo */
+.player-hand-section > * {
+    pointer-events: auto;
+}
+
+/* ================= ACTION BUTTONS ================= */
+.action-buttons {
+    margin-bottom: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+.action-buttons button {
+    font-size: 14px;
+    padding: 10px 18px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+    background: #f1c40f; /* Midab dahabi ah */
+    color: black;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+/* ================= GAME TABLE ================= */
+#game-table {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 10;
+    /* In yar kor u qaad miiska oo dhan */
+    margin-top: -30px; 
+}
+
+/* Ku dar qaybtaan si aad u qariso walxaha aan loo baahnayn bilowga */
+.in-lobby #turnText, 
+.in-lobby .game-stats, 
+.in-lobby .exit-btn {
+    display: none !important;
+}
+#game-table.active .action-buttons {
+    display: flex;
+}
+
+/* Qaybta Magaca (Bidix) */
+.welcome-msg {
+    flex: 1; /* Waxay qaadanaysaa booska bidix */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Qaybta Doorka (Dhexda) */
+#turnText {
+    flex: 2; /* Waxay hubinaysaa in qoraalku dhexda ku nagaado */
+    text-align: center;
+    font-size: 1.1rem;
+    text-transform: uppercase;
+}
+
+/* Qaybta Dhibcaha iyo Badhanka (Midig) */
+.game-stats {
+    display: flex;
+    align-items: center;
+    gap: 30px; /* Masaafada dhexda oo la kordhiyay */
+    min-width: 250px;
+    justify-content: flex-end;
+}
+
+/* Online Dot Animation (Midabka Cagaarka ah ee bilig-leynaya) */
+.dot-online {
+    color: #2ecc71;
+    margin-right: 5px;
+    animation: blink 1.5s infinite;
+}
+
+/* Iftiinka doorka caadiga ah */
+@keyframes pulse-gold {
+    0% { box-shadow: 0 0 5px #f1c40f; }
+    50% { box-shadow: 0 0 20px #f1c40f; }
+    100% { box-shadow: 0 0 5px #f1c40f; }
+}
+
+/* Digniinta waqtiga dhamaanaya */
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+.my-turn-active #dhigoBtn {
+    animation: pulse-gold 2s infinite;
+}
+
+/* Badanka ka bixitaanka (Exit Button - X) */
+#exit-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px; /* Geeska u dambeeya geli */
+    width: 40px;
+    height: 40px;
+    background: #ff4d4d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1000; /* Hubi inuu dusha jiro */
+}
+
+#exit-btn:hover {
+    background: #cc0000;
+}
+
+
+.active-turn-blink {
+    animation: blinker 1.5s linear infinite;
+    font-weight: bold;
+    text-shadow: 0 0 10px rgba(46, 204, 113, 0.8);
+}
+
+#setup-screen {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    text-align: center;
+    height: 100vh; /* 🔥 Tani ayaa soo celinaysa bartamaha */
+}
+
+
+#setup-screen input[type="text"] {
+    width: 340px;
+    max-width: 90%;
+    padding: 15px 20px;
+    font-size: 1.2rem;
+    color: #fff;
+    background: #111;
+    border: 2px solid #444;
+    border-radius: 10px;
+    text-align: center;
+    outline: none;
+    transition: 0.25s ease-in-out;
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
+}
+
+/* Bir-birqashada marka la taabto */
+#setup-screen input[type="text"]:focus {
+    border-color: #f1c40f;
+    box-shadow: 
+        0 0 10px #f1c40f,
+        0 0 20px rgba(241, 196, 15, 0.6),
+        0 0 30px rgba(241, 196, 15, 0.4);
+    background: #000;
+}
+
+
+/* ================= GAME TABLE AREA ================= */
+
+#game-table::before {
+    content: "";
+    position: absolute;
+
+    top: 48%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+
+    width: 85%;
+    max-width: 1100px;
+    height: 60vh;
+
+    background: radial-gradient(circle, #158a44 0%, #0a4d25 100%);
+
+    border: 10px solid #3d2b1f;   /* 🔥 soo celi border */
+    border-radius: 250px;         /* 🔥 oval shape */
+
+    box-shadow: 
+        inset 0 0 50px rgba(0,0,0,0.6),  /* gudaha */
+        0 10px 30px rgba(0,0,0,0.5);     /* dibadda */
+
+    z-index: 1;
+}
+
+.welcome-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* si uu u noqdo bartamaha shaashadda */
+    text-align: center;
+}
+
+
+/* 2. Meesha Kaarku yaallo (Deck/Stock) */
+#center-area {
+    position: absolute;
+    top: 40% !important; /* 50% ayay ahayd, hadda kor ayuu u kacay si looga fogaado gacanta */
+    left: 50%;
+    transform: translate(-50%, -40%);
+    z-index: 5000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#table-area {
+    position: absolute;
+    margin: 0 auto;
+    max-width: 900px;
+    height: 380px;
+    top: 25%;
+    left: 50%;
+	width: 80%;
+    height: 300px;
+    z-index: 20;
+    transform: translate(-50%, -50%);
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+
+
+.pile {
+    width: 80px;
+    height: 110px;
+    border-radius: 10px;
+
+    background: none !important;
+    box-shadow: none !important;
+    border: none !important;         /* 🔥 ka saar dashed */
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.piles-wrapper {
+    display: flex;
+    gap: 40px;
+    justify-content: center;
+    align-items: center;
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.pile-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+.pile-label {
+    font-size: 0.9rem;
+    color: #f1c40f;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+#stock-pile {
+    width: 100px;
+    height: 140px;
+    position: relative;
+    cursor: pointer;
+    z-index: 9999 !important; /* Kor u qaad xitaa ka badan */
+    pointer-events: auto !important; /* Hubi in la taaban karo */
+}
+#stock-pile:hover {
+    border: 5px solid red !important;
+}
+
+#stock-pile .card-back {
+    pointer-events: none; /* Ka dhig in click-ku uu dhex maro sawirka oo uu gaaro waalidka (#stock-pile) */
+}
+
+#stock-pile .card-back {
+    width: 100%;
+    height: 100%;
+    background-image: url('/cards/back.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+#stock-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 38px;
+    font-weight: 900;
+    color: yellow;
+    text-shadow: 2px 2px 4px black;
+    pointer-events: none;
+    z-index: 200;
+}
+
+
+/* Meesha kaarku yaalo (Discard Pile) */
+#discard-pile {
+    width: 100px;
+    height: 140px;
+    border: 2px dashed rgba(255,255,255,0.35); /* rectangle muuqda */
+    border-radius: 10px;
+    background: rgba(0,0,0,0.15); /* bannaan oo muuqaal fiican leh */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+	z-index: 6000 !important;
+}
+
+
+#discard-pile img {
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+
+
+
+#discard-pile img:hover {
+    transform: translateY(-5px);
+    box-shadow: 4px 4px 15px rgba(0,0,0,0.5);
+}
+
+/* (Discard Pile) uu dusha jiro */
+#discard-pile, #deck-pile {
+    position: relative;
+    z-index: 50 !important; /* Aad u sarreeya si loo arko loona riixo */
+    cursor: pointer;
+}
+
+/* ================= PLAYER SLOTS (OTHERS) ================= */
+.player-slot {
+    position: absolute;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+	z-index: 60;
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* TOP PLAYER */
+#player-top {
+    top: 21%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* LEFT PLAYER */
+#player-left {
+    left: 16%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* RIGHT PLAYER */
+#player-right {
+    right: 16%;
+    top: 50%;
+    transform: translate(50%, -50%);
+	background: none !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
+
+.player-name-tag {
+    background: #333; padding: 5px 15px; border-radius: 15px;
+    font-size: 0.9rem; border: 1px solid #555;
+}
+
+.player-name-tag.active {
+    background: #27ae60; border-color: #2ecc71; box-shadow: 0 0 10px #2ecc71;
+}
+
+
+#my-hand {
+    pointer-events: auto;
+    display: flex;
+    justify-content: center;
+    gap: -20px; /* Kaararka oo is dhow */
+    margin-bottom: 10px;
+	z-index: 20
+}
+
+/* ================= CARD STYLING ================= */
+.card {
+    width: 75px; 
+    height: 110px;
+    background: white; /* Ka dhig caddaan saafi ah si SVG-gu uga muuqdo */
+    border-radius: 8px;
+    margin-left: -20px;
+    display: flex; 
+    justify-content: center;
+    align-items: center;
+    box-shadow: -3px 0 8px rgba(0,0,0,0.4);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    position: relative;
+    overflow: hidden; /* Muhiim: si sawirku uusan geesaha uga bixin */
+}
+
+/* Kani waa class-ka u oggolaanaya sawirka inuu buuxiyo kaarka */
+.card-svg-main {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Si sawirku uusan u dhalan-rogmin */
+    display: block;
+    pointer-events: none; /* Si uusan u carqaladeyn click-ka iyo drag-ga */
+}
+
+/* Waxaan u baahanahay inaan nadiifino .card-main-container-ka dhexda ku jira */
+.card-main-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+}
+
+.active-turn {
+    border: 2px solid #2ecc71;
+    border-radius: 15px;
+    box-shadow: 0 0 15px #2ecc71;
+    padding: 2px;
+}
+
+.card:first-child { margin-left: 0; }
+
+.card:hover {
+    transform: translateY(-30px) rotate(2deg);
+    z-index: 100 !important;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+}
+
+.card.selected {
+    border: 3px solid #f1c40f !important;
+    box-shadow: 0 0 15px #f1c40f; /* Iftiin dahabi ah oo hareeraha ka ifaya */
+    transform: scale(1.05);      /* In yar ayuu weynaanayaa halkii uu kici lahaa */
+    transition: all 0.2s ease;
+    z-index: 10;                 /* Si uu kaararka kale uga sare maro */
+}
+
+.card-top { display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.card-center { font-size: 2rem; align-self: center; }
+.card-bottom { transform: rotate(180deg); display: flex; flex-direction: column; align-items: flex-start; line-height: 1; }
+.red-card { color: #e74c3c !important; }
+
+/* ================= ACTION BUTTONS ================= */
+
+
+
+.btn-dhigo, .btn-tuur, .btn-main {
+    padding: 8px 20px; border-radius: 20px;
+    font-weight: bold; cursor: pointer; border: none; color: white;
+}
+.btn-dhigo { background: #e67e22; }
+.btn-tuur { background: #d35400; }
+.btn-main { background: #f1c40f; color: black; }
+
+/* ================= EXTRA GAME ELEMENTS ================= */
+.player-sets-area {
+    min-height: 100px; background: rgba(0, 0, 0, 0.2);
+    border: 1px dashed #555; margin: 10px;
+    display: flex; flex-wrap: wrap; gap: 10px; padding: 10px;
+    border-radius: 8px; justify-content: center;
+}
+
+/* Meesha koox kasta oo kaarar ah la dhigayo */
+.card-group {
+    display: relative;
+    margin-right: 15px; 
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2); /* Wax yar ka madowow si ay uga muuqato miiska */
+    border-radius: 6px;
+    border: 1px dashed rgba(255, 255, 255, 0.2); /* Waxay u muuqanaysaa meel gooni u ah */
+	
+}
+
+/* Kaararka ku dhex jira kooxdaas (Sets-ka miiska yaala) */
+.card-group .card {
+    margin-left: -20px; /* Kaararka isku dhex jira way isku dhowaanayaan */
+    width: 45px;
+    height: 65px;
+    font-size: 0.8rem;
+    position: relative;
+    box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+	z-index: 20;
+}
+/* Kaarka ugu horeeya ee koox kasta yuusan yeelan margin-left */
+.card-group .card:first-child {
+    margin-left: 0;
+}
+/* Marka ay doorkaada tahay */
+.my-turn-active {
+    filter: none;
+    opacity: 1;
+    pointer-events: auto;
+    /* Iftiin cagaar ama dahabi ah oo hareeraha ka ifaya */
+    box-shadow: 0 0 20px rgba(46, 204, 113, 0.3);
+    border-top: 2px solid #2ecc71;
+    transition: all 0.4s ease;
+}
+
+.not-my-turn { filter: grayscale(0.8); opacity: 0.6; pointer-events: none; }
+
+/* ================= MOBILE RESPONSIVE ================= */
+@media (max-width: 600px) {
+    #game-table::before { 
+        width: 95%; 
+        height: 50vh; 
+        border-radius: 100px; 
+    }
+
+    .card { 
+        width: 55px; 
+        height: 85px; 
+        font-size: 0.9rem; 
+        margin-left: -25px; 
+    }
+}
+
+
+.card-set {
+    display: flex;
+    margin-bottom: 10px;
+}
+.card-set img {
+    margin-left: -20px; /* Tani waxay ka dhigaysaa inay is dul-saarmaan */
+    border: 1px solid #000;
+}
+
+/* Goobta ciyaarta dhexdeeda ah */
+.sets-container {
+    position: absolute;
+    display: flex;
+    gap: 10px;
+    padding: 5px;
+}
+
+/* Kaararka is dul-saaran */
+.card-group {
+    display: flex;
+    flex-direction: row; /* Caadiyan waa jiif */
+}
+
+.card-group img {
+    width: 50px; /* Cabirka kaarka */
+    height: auto;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background-color: white;
+}
+
+/* --- TOP & BOTTOM (Horizontal) --- */
+.pos-top, .pos-bottom {
+    flex-direction: row; 
+    justify-content: center;
+    width: 100%;
+}
+
+/* Kaararka is dul-saaran ee jiifka ah */
+.pos-top .card-group img, 
+.pos-bottom .card-group img {
+    margin-left: -35px; /* Kaarka ka dambeeya ayaa soo riixaya */
+}
+.pos-top .card-group img:first-child, 
+.pos-bottom .card-group img:first-child {
+    margin-left: 0;
+}
+
+/* --- LEFT & RIGHT (Vertical) --- */
+.pos-left, .pos-right {
+    flex-direction: column; /* Kaararka is daba dhig */
+    align-items: center;
+    height: 200px;
+}
+
+/* Kaararka is dul-saaran ee taagan (Vertical Stack) */
+.pos-left .card-group, 
+.pos-right .card-group {
+    flex-direction: column; /* Group-ka dhexdiisa kaararka is dusha saar */
+    margin-bottom: 15px;
+}
+
+.pos-left .card-group img, 
+.pos-right .card-group img {
+    margin-top: -60px; /* Kaarka hoose kor u soo qaad */
+}
+.pos-left .card-group img:first-child, 
+.pos-right .card-group img:first-child {
+    margin-top: 0;
+}
+
+.card-group img:hover {
+    transform: translateY(-5px);
+    z-index: 100;
+    cursor: pointer;
+}
+
+
+
+/* 2. In magacyada ciyaartoyda ay dusha soo baxaan */
+.player-info {
+    position: relative;
+    z-index: 60;
+    background: rgba(0, 0, 0, 0.6); /* Inyar oo madow ah si qoraalku u muuqdo */
+    padding: 5px 10px;
+    border-radius: 15px;
+}
+
+/* 3. Meesha 'ADIGA AYAA LEH' si aysan u daboolin kaarkaaga */
+.status-msg {
+    margin-bottom: 20px;
+    z-index: 120;
+}
+
+#timer-container {
+    position: absolute;
+    top: -40px; /* Ka kor mari magaca */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #ffcc00;
+    color: #000;
+    font-weight: bold;
+    padding: 2px 8px;
+    border-radius: 5px;
+    z-index: 200;
+    display: none; /* Waxaa lagu soo bandhigi doonaa JavaScript */
+}
+
+.active-turn #timer-container {
+    display: block; /* Markay qofka doorkiisa tahay kaliya soo saar */
+}
+
+.green-oval { /* Ama magaca aad u bixisay miiska cagaarka ah */
+    position: absolute;
+    z-index: 5; /* Kan ha hooseeyo */
+    width: 80%;
+    height: 70%;
+    background: #0d5c2e;
+    border: 10px solid #3d2b1f;
+    border-radius: 50%;
+}
+
+#deck-pile .deck-count {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 38px;
+    font-weight: 900;
+    color: yellow;
+    text-shadow: 2px 2px 4px black;
+    z-index: 200;
+    pointer-events: none;
+}
+
+
+/* Haddii aad isticmaalayso <img> tag gudaha HTML-ka */
+#deck-pile img {
+    content: url('/cards/back.png') !important;
+}
+
+#deck-indicator {
+    position: absolute;
+    top: 5px; /* Ka dhig inuu wax yar uun u muuqdo */
+    left: 5px;
+    z-index: 1; /* Ka dhig inuu ka hooseeyo Deck-ga */
+    opacity: 0.5;
+    transform: rotate(-10deg);
+}
+
+/* Weelka dhibcaha (Score Container) */
+#score-container {
+    position: absolute;
+    top: 20px;
+    right: 80px; /* Ka fogee geeska si X-ta ay boos u hesho */
+    background: rgba(0, 0, 0, 0.7);
+    padding: 10px 15px;
+    border-radius: 8px;
+    color: #fff;
+    border: 1px solid #444;
+}
+
+/* Dhibcaha (Score) geli dhinaca bidix ee X-ta */
+.score-badge {
+    position: absolute;
+    top: 15px;
+    right: 70px; /* Isaga ayaa ka sikan X-ta */
+    background: #333;
+    padding: 5px 12px;
+    border-radius: 20px;
+}
+
+/* style.css */
+.deck-indicator-card {
+    display: none; /* Haddii aadan u baahnayn, gabi ahaanba qari */
+}
+
+/* Haddii aad rabto inuu dhabarka Deck-ga uun u muuqdo */
+#deck-pile::before {
+    content: "";
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    z-index: -1;
+}
+
+/* Kaarka Blue-ga ah ee daboolaya (hadii uu yahay kii dhabarka) */
+.card-back {
+    width: 100px;
+    height: 140px;
+    background-image: url('/cards/back.png');
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+
+/* Badhamada (Dhigo, Tuur, iwm) */
+.controls {
+    position: relative;
+    z-index: 20; /* Badhamada waa inay ka sareeyaan xitaa kaararka */
+}
+
+/* DRAG & DROP FIX */
+
+.card {
+    position: relative;
+    width: 75px;
+    height: 110px;
+
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    border-radius: 8px;
+    border: 1px solid #ddd;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+
+    padding: 5px;
+    margin-left: -20px;
+
+    font-weight: bold;
+    font-size: 1.1rem;
+
+    box-shadow: -3px 0 8px rgba(0,0,0,0.4);
+    transition: all 0.2s ease;
+
+    cursor: pointer;
+    touch-action: none;
+
+    z-index: 50;
+}
+
+.card * {
+    pointer-events: none;
+}
+
+/* Hover (transform-ka waa laga saaray si drag u shaqeeyo) */
+.card:hover {
+    z-index: 100;
+}
+
+
+.card:hover {
+    /* 4. Marka mouse-ka la dhex mariyo */
+    transform: translateY(-30px) rotate(2deg); /* Aad u kor u kac + wareeg yar */
+    z-index: 100 !important; /* Mar walba ka dhig kan ugu koreeya */
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5); /* Hooska kordhi si uu u soo muuqdo */
+}
+.setup-footer {
+    position: absolute;
+    bottom: 10px;
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+    background: rgba(0,0,0,0.8);
+    z-index: 1;
+}
+
+.dev-footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    text-align: center;
+    padding: 8px;
+    background: rgba(0,0,0,0.8);
+    z-index: 10;
+}
+
+
+.game-active .action-buttons {
+    display: flex;
+}
+
+.my-turn .action-buttons {
+    display: flex;
+}
+#game-table.game-active ~ #my-hand-section .action-buttons {
+    display: flex;
+}
+
+.table-bg,
+.table,
+.table-container {
+    background: none !important;
+    box-shadow: none !important;
+}
+
+/* Ogaanshaha inta magaca soo galisay */
+#waiting-room {
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 20px;
+    max-width: 400px;
+    margin: 50px auto;
+    box-shadow: 0 0 20px rgba(241, 196, 15, 0.2);
+    border: 1px solid #444;
+}
+
+#players-list div {
+    background: rgba(46, 204, 113, 0.1);
+    margin: 10px 0;
+    padding: 12px;
+    border-radius: 10px;
+    border-left: 4px solid #2ecc71;
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(-20px); }
+    to { opacity: 1; transform: translateX(0); }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Iskaala 101",
+  "short_name": "Iskaala",
+  "display": "standalone",
+  "start_url": "/",
+  "orientation": "landscape"
+}

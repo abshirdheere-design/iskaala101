@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="so">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turubka Casriga ah - Iskaala 101</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="setup-screen">
+    <h1 style="color: #f1c40f;">Ku soo dhawaaw Turubka</h1>
+    <p style="color: #ccc;">Fadlan geli magacaaga si aad u bilowdo</p>
+    <input type="text" id="nameInput" placeholder="Magacaaga..." maxlength="15">
+    <button id="startGameBtn" class="btn-main">BILOW CIYAARTA</button>
+</div>
+
+<div id="waiting-room" style="display:none; text-align: center; margin-top: 50px;">
+    <h2 style="color: #f1c40f;">Qolka Sugitaanka</h2>
+    <div id="players-list"></div>
+    <p id="waiting-status" style="color: #2ecc71;">Raadinaya... (0/4)</p>
+</div>
+
+<header id="main-header" class="game-header" style="display:none;">
+    <div class="welcome-msg">
+        <span class="dot-online">●</span>
+        <span id="display-name">Guest</span>
+    </div>
+
+    <div id="turnText">Sug doorkaaga...</div>
+
+    <div class="game-stats">
+        Dhibcaha: <span id="my-score">0</span>
+    </div>
+
+    <button class="exit-btn" onclick="location.reload()">X</button>
+</header>
+
+<main id="game-table" style="display:none;">
+    <div class="game-wrapper">
+        
+        <div id="table-area">
+            <div id="top-table"></div>
+            <div id="left-table"></div>
+            <div id="right-table"></div>
+            <div id="my-table-sets"></div>
+        </div>
+
+        <div id="player-top" class="player-slot">
+            <div id="top-name" class="player-name-tag">Sugaya...</div>
+        </div>
+        
+        <div id="player-left" class="player-slot">
+            <div id="left-name" class="player-name-tag">Sugaya...</div>
+        </div>
+        
+        <div id="player-right" class="player-slot">
+            <div id="right-name" class="player-name-tag">Sugaya...</div>
+        </div>
+
+        <section id="center-area">
+            <div class="piles-wrapper">
+                <div id="stock-pile" class="pile">
+                    <div class="card-back">
+                        <span id="stock-count">88</span>
+                    </div>
+                </div>
+                <div id="discard-pile" class="pile"></div>
+            </div>
+        </section>
+
+    </div> </main>
+
+<div id="my-hand-section" class="player-hand-section" style="display:none;">
+    <div id="my-hand"></div>
+
+    <div class="action-buttons">
+        <button id="dhigoBtn">Dhigo</button>
+        <button id="resetBtn">Ka noqo</button>
+        <button id="sortBtn">Sort</button>
+        <button id="tuurBtn">Tuur</button>
+    </div>
+</div>
+
+<footer class="dev-footer">
+    <div class="dev-info">Developed by: <span class="dev-name">Abshir Hassan</span></div> 
+    <div class="copyright">© 2026 All Rights Reserved</div>
+</footer>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="script.js"></script>
+
+</body>
+</html>
