@@ -5,50 +5,19 @@ const socket = io();
 let myHand = [];
 let isMyTurn = false;
 let hasDrawn = false;
-let pickedFromDiscard = false;   
-let isOpened = false;           
+let pickedFromDiscard = false;   // Inuu tuurista ka soo qaatay (Xeerka 101)
+let isOpened = false;            // Inuu hore u degay (Opened 101)
 let iHaveOpened = false; 
-let myOpenedSets = []; 
-let temporaryScore = 0; 
-// --- KU DAR KUWAN OO KALIYA ---
-let dragStartIndex = null; 
-let touchStartX, touchStartY;
-let originalElement = null;
+let myOpenedSets = []; // Meesha lagu kaydiyo kaararka aad degtay
+let temporaryScore = 0; // Dhibcaha urursanaya ka hor 101
+let setsOfTopPlayer = [];
+let setsOfLeftPlayer = [];
+let setsOfRightPlayer = [];
 
 const pointValues = { 
     '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
     'J': 10, 'Q': 10, 'K': 10, 'A': 11 
 };
-
-function createCardElement(card) {
-    const cardDiv = document.createElement('div');
-    const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-    const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
-    const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
-
-    const isRed = card.suit === '♥' || card.suit === '♦';
-    cardDiv.className = `card ${isRed ? 'red' : 'black'}`;
-    cardDiv.dataset.cardId = card.id;
-
-    cardDiv.innerHTML = `
-        <div class="card-corner top-left">
-            <span>${card.value}</span>
-            <span>${card.suit}</span>
-        </div>
-        <div class="card-main-container">
-             <img src="cards/${imageName}" class="card-svg-main" 
-                  onload="this.style.opacity='1'; this.parentElement.querySelector('.fallback-symbol').style.display='none'"
-                  onerror="this.style.display='none'">
-             <span class="fallback-symbol">${card.suit}</span>
-        </div>
-        <div class="card-corner bottom-right">
-            <span>${card.value}</span>
-            <span>${card.suit}</span>
-        </div>
-    `;
-    cardDiv.onclick = () => selectCard(cardDiv, card);
-    return cardDiv;
-}
 
 // Hubinta xeerka 101 iyo in ugu yaraan hal koox ay tahay 4+ kaar
 function karaaInuuDego(sets) {
@@ -63,49 +32,54 @@ function renderMyHand() {
     const tuurBtn = document.getElementById("tuurBtn");
 
     if (!area) return;
-    area.innerHTML = ""; 
+    area.innerHTML = ""; // Nadiifi gacanta ka hor intaanan dib u sawirin
 
+    // 1. Cusboonaysii tirada kaararka
     if (countBadge) countBadge.textContent = myHand.length;
 
+    // 2. Badhanka TUUR logic-ga
     if (tuurBtn) {
         tuurBtn.style.display = (isMyTurn && (myHand.length === 15 || hasDrawn)) ? "block" : "none";
     }
 
+    // 3. Sawir kaar kasta oo gacanta ku jira
     myHand.forEach((card, index) => {
         const cardDiv = document.createElement("div");
         cardDiv.draggable = true;
         cardDiv.dataset.index = index;
+        // Ku dar class-yada CSS-ka
         cardDiv.className = `card ${card.selected ? 'selected' : ''}`;
+        
+        // Midabka gaduudka (Hearts/Diamonds)
+        const isRed = (card.suit === '♥' || card.suit === '♦');
+        if (isRed) cardDiv.classList.add("red-card");
 
-        // Hel magaca sawirka saxda ah (Tusaale: 6s.svg)
-        const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-        const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
-        const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
-
-        // Dhismaha cusub ee sawirka u isticmaalaya SVG-gaaga
+        // Dhismaha gudaha ee kaarka
         cardDiv.innerHTML = `
-            <div class="card-main-container">
-                <img src="cards/${imageName}" class="card-svg-main" 
-                     alt="${card.value}${card.suit}"
-                     style="width: 100%; height: 100%; border-radius: 8px;">
+            <div class="card-top">
+                <span>${card.value}</span>
+                <span>${card.suit}</span>
+            </div>
+            <div class="card-center">${card.suit}</div>
+            <div class="card-bottom">
+                <span>${card.suit}</span>
+                <span>${card.value}</span>
             </div>
         `;
 
+        // Marka kaarka la riixo (Selection)
         cardDiv.onclick = () => {
             card.selected = !card.selected;
-            renderMyHand(); 
+            renderMyHand(); // Dib u sawir si 'selected' u muuqato
             if (typeof calculateTemporaryScore === "function") {
                 calculateTemporaryScore();
             }
         };
 
+        // DRAG EVENTS
         cardDiv.addEventListener("dragstart", handleDragStart);
         cardDiv.addEventListener("dragover", handleDragOver);
         cardDiv.addEventListener("drop", handleDrop);
-		
-		cardDiv.addEventListener("touchstart", handleTouchStart, {passive: false});
-        cardDiv.addEventListener("touchmove", handleTouchMove, {passive: false});
-        cardDiv.addEventListener("touchend", handleTouchEnd, {passive: false});
 
         area.appendChild(cardDiv);
     });
@@ -160,6 +134,7 @@ function calculateTemporaryScore() {
 function renderMyTableSets() {
     const tableArea = document.getElementById("my-table-sets");
     if (!tableArea) return;
+
     tableArea.innerHTML = "";
 
     myOpenedSets.forEach(set => {
@@ -167,137 +142,52 @@ function renderMyTableSets() {
         setDiv.className = "card-set";
 
         set.forEach(card => {
-            const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-            const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
-            const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
-
             const cDiv = document.createElement("div");
-            cDiv.className = "card small"; // Isticmaal class-kaaga 'small'
-            cDiv.innerHTML = `<img src="cards/${imageName}" style="width:100%; height:100%;">`;
+            cDiv.className = `card small ${card.suit === '♦' || card.suit === '♥' ? 'red' : ''}`;
+
+            cDiv.innerHTML = `
+                <span class="v">${card.value}</span>
+                <span class="s">${card.suit}</span>
+            `;
 
             setDiv.appendChild(cDiv);
         });
+
         tableArea.appendChild(setDiv);
     });
 }
 
 function handleResetDhigista() {
-    // 1. Hubi haddii uu qofku horay u degay turn-yadii hore (Server-verified)
-    // Waxaan isticmaalaynaa 'isOpened' maadaama ay tahay tan rasmiga ah
-    if (isOpened) {
+    if (iHaveOpened) {
         alert("Hore ayaad u degtay, kama noqon kartid kaararka miiska!");
         return;
     }
 
-    if (myOpenedSets.length === 0) {
-        alert("Ma jiraan kaarar aad miiska saartay oo aad ka noqon karto.");
-        return;
-    }
-
-    // 2. Soo celi kaararka miiska ku-meel-gaarka ah
+    // 1. Soo celi kaararka miiska ku-meel-gaarka ah
     for (const set of myOpenedSets) {
-        set.forEach(card => {
-            // Hubi inaan 'id' iyo 'suit' sax u soo celinayno si aysan u lumin xogta
+        for (const card of set) {
             myHand.push({
-                ...card,       // Nuqul ka samee dhammaan xogta kaarka (id, rank, iwm)
-                selected: false // Hubi inuusan 'selected' u muuqan markuu gacanta ku soo laabto
+                value: card.value,
+                suit: card.suit,
+                selected: false
             });
-        });
+        }
     }
 
-    // 3. Nadiifi xogta ku-meel-gaarka ah
+    // 2. Nadiifi xogta ku-meel-gaarka ah
     myOpenedSets = [];
     temporaryScore = 0;
 
-    // 4. Cusboonaysii UI-ga
+    // 3. Dib u sawir gacanta iyo miiska
     renderMyHand();
     renderMyTableSets();
 
     const scoreDisplay = document.getElementById("temp-score-display");
     if (scoreDisplay) scoreDisplay.textContent = "0";
 
-    console.log("Kaararkii waa la soo celiyay, score-kiina waa la eberyeeyay.");
+    alert("Kaararkii waa lagu soo celiyay gacantaada.");
 }
 
-
-
-/* ================= DRAG & DROP LOGIC ================= */
-
-function handleDragStart(e) {
-    const card = e.target.closest(".card");
-    if (!card) return;
-    
-    // Halkan 'let' ha ku qorin, si uu u isticmaalo kii dusha sare
-    dragStartIndex = +card.dataset.index; 
-}
-
-/* ================= TOUCH LOGIC (MOBILE) ================= */
-
-function handleTouchStart(e) {
-    const card = e.target.closest(".card");
-    if (!card) return;
-
-    // Halkan 'let' ha ku qorin
-    dragStartIndex = +card.dataset.index; 
-    
-    const touch = e.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
-    originalElement = card;
-}
-
-function handleTouchMove(e) {
-    if (!originalElement) return;
-    if (e.cancelable) e.preventDefault(); 
-
-    const touch = e.touches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-
-    originalElement.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
-    originalElement.style.zIndex = "1000";
-}
-
-function handleTouchEnd(e) {
-    if (!originalElement || dragStartIndex === null) return;
-
-    const touch = e.changedTouches[0];
-    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-    const dropCard = dropTarget ? dropTarget.closest(".card") : null;
-
-    if (dropCard && dropCard !== originalElement) {
-        const dragEndIndex = +dropCard.dataset.index;
-        
-        // Swap Logic
-        const temp = myHand[dragStartIndex];
-        myHand[dragStartIndex] = myHand[dragEndIndex];
-        myHand[dragEndIndex] = temp;
-        
-        myHand.forEach(c => c.selected = false);
-        renderMyHand();
-    } else {
-        originalElement.style.transform = "";
-        originalElement.style.zIndex = "";
-    }
-    
-    originalElement = null;
-    dragStartIndex = null; // Dib u eberree
-}
-
-function handleDrop(e) {
-    const dropCard = e.target.closest(".card");
-    if (!dropCard || dragStartIndex === null) return;
-
-    const dragEndIndex = +dropCard.dataset.index;
-
-    const temp = myHand[dragStartIndex];
-    myHand[dragStartIndex] = myHand[dragEndIndex];
-    myHand[dragEndIndex] = temp;
-
-    myHand.forEach(c => c.selected = false);
-    dragStartIndex = null; 
-    renderMyHand();
-}
 
 /* ================= ACTIONS ================= */
 
@@ -307,51 +197,53 @@ function handleDhigista() {
     let selectedCards = myHand.filter(c => c.selected);
     if (selectedCards.length < 3) return alert("Koox kasta waa inay ugu yaraan 3 kaar noqotaa!");
 
+    // 1. Hubi haddii kooxda hadda la doortay ay sax tahay
     if (!isSerial(selectedCards) && !isSet(selectedCards)) {
         return alert("Kaararka aad dooratay ma ahan koox sax ah (Set ama Serial).");
     }
 
+    // 2. Xisaabi dhibcaha kooxdan cusub
     let currentSetScore = selectedCards.reduce((sum, c) => sum + (pointValues[c.value] || 0), 0);
 
-    if (!isOpened) {
-        // --- WEJI-GA 1aad: URURINTA 101 ---
+    if (!isOpened) { // Halkan waxaan u isticmaalnay 'isOpened' oo ah state-ka rasmiga ah
+        // --- URURINTA KUMEEL-GAARKA AH ---
         temporaryScore += currentSetScore;
         myOpenedSets.push([...selectedCards]); 
 
+        // Ka saar gacanta si ku-meel-gaar ah
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
         renderMyTableSets();
 
+        // 3. Xeerka 101: Haddii wadarta kumeel-gaarka ah ay gaarto 101
         if (temporaryScore >= 101) {
             const hasFourCardGroup = myOpenedSets.some(set => set.length >= 4);
 
             if (!hasFourCardGroup) {
+                // Haddii dhibcuhu 101 gaareen laakiin aan la haysan 4-xabo
                 alert("101 waad gaartay, laakiin xeerka Iskaala wuxuu rabaa ugu yaraan hal koox oo 4+ kaar ah. Sii wad dhigista!");
                 return; 
             }
 
-            // Markii shuruuduhu fulaan u dir server-ka
+            // 🔥 Hadda u dir Server-ka dhammaan wixii miiska kumeel-gaarka ah saarnaa
+            isOpened = true; // State-ka guud u beddel true
             socket.emit("playerOpens", {
                 allSets: myOpenedSets, 
                 totalScore: temporaryScore
             });
 
-            isOpened = true; 
-            alert("Hambalyo! Waad degtay.");
+            alert("Hambalyo! Waad degtay. Dhibcahaaga: " + temporaryScore);
         } else {
-            alert(`Kooxda waa la qabtay. Wadarta: ${temporaryScore}. Sii wad ilaa 101!`);
+            alert(`Kooxda waa la qabtay. Wadarta hadda: ${temporaryScore}. Sii wad ilaa 101!`);
         }
 
     } else {
-        // --- WEJI-GA 2aad: HORE AYAAD U DEGTAY ---
-        // Kaliya u dir server-ka. UI-ga ha taaban, ha u oggolaado server-ka inuu update-ka soo celiyo
+        // Haddii uu qofku hore u degay (Turn-yadii hore)
         socket.emit("addToTable", { cards: selectedCards });
-        
-        // Kaliya ka saar gacantaada
+        myOpenedSets.push([...selectedCards]);
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
-        
-        // Xusuusin: renderMyTableSets() waxaa yeelan doona socket.on("updateTableUI")
+        renderMyTableSets();
     }
 }
 
@@ -407,26 +299,34 @@ function handleSort() {
     renderMyHand();
 }
 
+
+let dragStartIndex = null;
+
+function handleDragStart(e) {
+    const card = e.target.closest(".card");
+    if (!card) return;
+    dragStartIndex = +card.dataset.index;
+}
+
 function handleDragOver(e) {
-    e.preventDefault(); // Muhiim si drop-ku u shaqeeyo
+    e.preventDefault(); // Waa muhiim si drop u shaqeeyo
 }
 
 function handleDrop(e) {
     const dropCard = e.target.closest(".card");
-    if (!dropCard || dragStartIndex === null) return;
+    if (!dropCard) return;
 
     const dragEndIndex = +dropCard.dataset.index;
 
-    // 1. Bedel boosaska labada kaar ee Array-ga myHand
+    // Badal boosaska labada kaar
     const temp = myHand[dragStartIndex];
     myHand[dragStartIndex] = myHand[dragEndIndex];
     myHand[dragEndIndex] = temp;
 
-    // 2. Nadiifi xogta
+    // Ka saar selection-ka
     myHand.forEach(c => c.selected = false);
-    dragStartIndex = null; // Dib u eberree markii uu dhamaysto
 
-    // 3. Dib u sawir gacanta
+    // Dib u sawir gacanta
     renderMyHand();
 }
 
@@ -459,21 +359,13 @@ renderSets("right-table", setsOfRightPlayer);       // Midig
 socket.on("updateTableUI", (data) => {
     const { playerId, allSets, nextRequiredPoints } = data;
 
-    // 1. Ma anigaa mise waa qof kale?
-    // Haddii ay adiga tahay, cusboonaysii array-gaaga
-    if (playerId === socket.id) {
-        myOpenedSets = allSets;
-        renderMyTableSets(); // Function-kaagii hore ee quruxda badnaa
-        return; 
-    }
-
-    // 2. Haddii ay dadka kale tahay (Dynamic Rendering)
     const tableArea = document.getElementById("table-area");
     if (!tableArea) return;
 
+    // 1. Hubi in ID-ga uu yahay mid sax ah oo HTML-ku aqbali karo
     const safeId = playerId.replace(/[^a-zA-Z0-9_-]/g, "");
-    let playerTable = document.getElementById(`table-${safeId}`);
 
+    let playerTable = document.getElementById(`table-${safeId}`);
     if (!playerTable) {
         playerTable = document.createElement("div");
         playerTable.id = `table-${safeId}`;
@@ -481,29 +373,27 @@ socket.on("updateTableUI", (data) => {
         tableArea.appendChild(playerTable);
     }
 
+    // 2. Nadiifi miiska
     playerTable.innerHTML = "";
 
+    // 3. Ku dar set-yada
     allSets.forEach(set => {
         const setDiv = document.createElement("div");
-        setDiv.className = "card-set"; // Isticmaal isla class-kaaga
+        setDiv.classList.add("set");
 
         set.forEach(card => {
-            // Halkan ku dar sawirkii SVG-ga ahaa halkii aad qoraal ka dhigi lahayd
-            const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-            const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
-            const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
-
-            const cDiv = document.createElement("div");
-            cDiv.className = "card small"; // Kaarar yaryar oo miiska ah
-            cDiv.innerHTML = `<img src="cards/${imageName}" style="width:100%; height:100%;">`;
-            setDiv.appendChild(cDiv);
+            const cardDiv = document.createElement("div");
+            cardDiv.classList.add("card", "mini-card");
+            cardDiv.innerHTML = `${card.value}${card.suit}`;
+            setDiv.appendChild(cardDiv);
         });
+
         playerTable.appendChild(setDiv);
     });
 
-    if (document.getElementById("requiredPoints")) {
-        document.getElementById("requiredPoints").innerText = nextRequiredPoints;
-    }
+    // 4. Update next required points
+    const req = document.getElementById("requiredPoints");
+    if (req) req.innerText = nextRequiredPoints;
 });
 
 
@@ -682,6 +572,35 @@ document.getElementById("stock-pile").onclick = () => {
 };
 
 
+socket.on("playersUpdate", (data) => {
+    const { players, stockCount, currentTurnId } = data;
+
+    isMyTurn = (currentTurnId === socket.id);
+
+    // Update turn text
+    const statusEl = document.getElementById("turnText");
+    if (statusEl) {
+        statusEl.textContent = isMyTurn ? "Doorkaaga" : "Sugaya...";
+        statusEl.style.color = isMyTurn ? "#2ecc71" : "#f1c40f";
+    }
+
+    // Update stock count
+    const stockEl = document.getElementById("stock-count");
+    if (stockEl) stockEl.textContent = stockCount;
+
+    // Control buttons
+    document.getElementById("dhigoBtn").disabled = !isMyTurn;
+    document.getElementById("tuurBtn").disabled = !isMyTurn;
+    document.getElementById("sortBtn").disabled = false; // sort always allowed
+    document.getElementById("resetBtn").disabled = !isMyTurn;
+
+    // Control piles
+    document.getElementById("stock-pile").style.pointerEvents = isMyTurn ? "auto" : "none";
+    document.getElementById("discard-pile").style.pointerEvents = isMyTurn ? "auto" : "none";
+});
+
+
+
 /* ================= GAME START LISTENER ================= */
 socket.on("matchFound", (data) => {
     // 1. Qari shaashadaha hore
@@ -794,69 +713,15 @@ socket.on("yourTurn", (playerId) => {
     renderMyHand();
 });
 
-/* ================= PLAYERS UPDATE (Turn, Glow, & UI) ================= */
+
+
 socket.on("playersUpdate", (data) => {
-    const { players, stockCount, currentTurnId } = data;
-
-    // 1. Hubi haddii ay tahay doorkaaga
-    const wasMyTurn = isMyTurn;
-    isMyTurn = (currentTurnId === socket.id);
-
-    // Haddii doorku kaa wareegay, jooji saacadda (timer)
-    if (wasMyTurn && !isMyTurn) {
-        if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
+    const stockCount = document.getElementById("stock-count");
+    if (stockCount && data.stockCount !== undefined) {
+        stockCount.innerText = data.stockCount;
     }
-
-    // 2. Cusboonaysii qoraalka kore (Header Turn Text)
-    const statusEl = document.getElementById("turnText");
-    if (statusEl) {
-        statusEl.textContent = isMyTurn ? "Doorkaaga" : "Sugaya...";
-        statusEl.style.color = isMyTurn ? "#2ecc71" : "#f1c40f";
-    }
-
-    // 3. Cusboonaysii tirada turubka badda (Stock Count)
-    const stockEl = document.getElementById("stock-count");
-    if (stockEl && stockCount !== undefined) {
-        stockEl.textContent = stockCount;
-    }
-
-    // 4. MAAMULKA IFTIINKA (ACTIVE CLASS)
-    // Marka hore nadiifi iftiinkii hore ee qof kasta
-    document.querySelectorAll('.player-name-tag').forEach(tag => {
-        tag.classList.remove('active');
-    });
-
-    // Hel xogta qofka hadda doorka leh si loo iftiimiyo magaciisa miiska saaran
-    const activePlayer = players.find(p => p.id === currentTurnId);
-    if (activePlayer) {
-        const tags = [
-            document.getElementById("top-name"),
-            document.getElementById("left-name"),
-            document.getElementById("right-name")
-        ];
-
-        tags.forEach(tag => {
-            if (tag && tag.innerText === activePlayer.name) {
-                tag.classList.add('active'); // Kani wuxuu kicinayaa CSS animation-ka 'glow'
-            }
-        });
-    }
-
-    // 5. Control Buttons & Piles
-    const dhigoBtn = document.getElementById("dhigoBtn");
-    const tuurBtn = document.getElementById("tuurBtn");
-    const resetBtn = document.getElementById("resetBtn");
-
-    if (dhigoBtn) dhigoBtn.disabled = !isMyTurn;
-    if (tuurBtn) tuurBtn.disabled = !isMyTurn;
-    if (resetBtn) resetBtn.disabled = !isMyTurn;
-
-    const stockPile = document.getElementById("stock-pile");
-    const discardPile = document.getElementById("discard-pile");
-
-    if (stockPile) stockPile.style.pointerEvents = isMyTurn ? "auto" : "none";
-    if (discardPile) discardPile.style.pointerEvents = isMyTurn ? "auto" : "none";
 });
+
 
 socket.on("updateDiscardPile", (card) => {
     const pile = document.getElementById("discard-pile");
@@ -865,19 +730,16 @@ socket.on("updateDiscardPile", (card) => {
     pile.innerHTML = "";
 
     if (card) {
-        // 1. U beddel astaanta (♥) xaraf (h) si uu u helo faylka SVG-ga
-        const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
-        const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
-        const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
-
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
-        
-        // 2. Halkii aad HTML qori lahayd, geli sawirka SVG-ga ah
+
+        const isRed = (card.suit === '♥' || card.suit === '♦');
+        cardDiv.style.color = isRed ? "red" : "black";
+
         cardDiv.innerHTML = `
-            <img src="cards/${imageName}" 
-                 style="width: 100%; height: 100%; object-fit: contain; border-radius: 8px;"
-                 alt="${card.value}${card.suit}">
+            <div class="card-top"><span>${card.value}</span><span>${card.suit}</span></div>
+            <div class="card-center">${card.suit}</div>
+            <div class="card-bottom"><span>${card.suit}</span><span>${card.value}</span></div>
         `;
 
         pile.appendChild(cardDiv);
@@ -890,16 +752,9 @@ socket.on("updateOpponents", (data) => {
     const leftEl = document.getElementById("left-name");
     const rightEl = document.getElementById("right-name");
 
-    // Dib u soo celinta sidii hore:
-    // Left wuxuu qaadanayaa data.left, Right-na data.right
-    if (topEl)   topEl.innerText   = data.top   ? data.top.name   : "";
-    if (leftEl)  leftEl.innerText  = data.left  ? data.left.name  : ""; 
-    if (rightEl) rightEl.innerText = data.right ? data.right.name : ""; 
-
-    // Muuqaalka boosaska (Visibility)
-    document.getElementById("player-top").style.visibility   = data.top   ? "visible" : "hidden";
-    document.getElementById("player-left").style.visibility  = data.left  ? "visible" : "hidden";
-    document.getElementById("player-right").style.visibility = data.right ? "visible" : "hidden";
+    if (topEl)  topEl.innerText  = data.top  ? data.top.name  : "";
+    if (leftEl) leftEl.innerText = data.left ? data.left.name : "";
+    if (rightEl) rightEl.innerText = data.right ? data.right.name : "";
 });
 
 
