@@ -494,19 +494,19 @@ socket.on("waitingRoomUpdate", (data) => {
 
         switch(dhiman) {
             case 3:
-                statusText.innerText = "3 qof ayaa dhiman weli...";
+                statusText.innerHTML = `Waxaa la helay: 1 ciyaartooy<br>Waxaa dhiman: 3 ciyaartooy`;
                 statusText.style.color = "#f1c40f";
                 break;
             case 2:
-                statusText.innerText = "2 qof ayaa dhiman weli...";
+                statusText.innerHTML = `Waxaa la helay: 2 ciyaartooy<br>Waxaa dhiman: 2 ciyaartooy`;
                 statusText.style.color = "#e67e22";
                 break;
             case 1:
-                statusText.innerText = "1 qof ayaa dhiman weli...";
+                statusText.innerHTML = `Waxaa la helay: 3 ciyaartooy<br>Waxaa dhiman: 1 ciyaartooy`;
                 statusText.style.color = "#e74c3c";
                 break;
             case 0:
-                statusText.innerText = "Ciyaartu way bilaabanaysaa...";
+                statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
                 statusText.style.color = "#2ecc71";
                 break;
             default:
