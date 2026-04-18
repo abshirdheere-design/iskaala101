@@ -492,25 +492,19 @@ socket.on("waitingRoomUpdate", (data) => {
         const count = data.players.length;
         const dhiman = 4 - count;
 
-        switch(dhiman) {
-            case 3:
-                statusText.innerHTML = `Waxaa la helay: 1 ciyaartooy<br>Waxaa dhiman: 3 ciyaartooy`;
-                statusText.style.color = "#f1c40f";
-                break;
-            case 2:
-                statusText.innerHTML = `Waxaa la helay: 2 ciyaartooy<br>Waxaa dhiman: 2 ciyaartooy`;
-                statusText.style.color = "#e67e22";
-                break;
-            case 1:
-                statusText.innerHTML = `Waxaa la helay: 3 ciyaartooy<br>Waxaa dhiman: 1 ciyaartooy`;
-                statusText.style.color = "#e74c3c";
-                break;
-            case 0:
-                statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
-                statusText.style.color = "#2ecc71";
-                break;
-            default:
-                statusText.innerText = `Ciyaartoyda la helay: ${count}/4`;
+        // Midabada
+        let color = "#ffffff"; 
+        if (dhiman === 3) color = "#f1c40f"; // Jaalle
+        if (dhiman === 2) color = "#e67e22"; // Oranji
+        if (dhiman === 1) color = "#e74c3c"; // Cas
+
+        if (dhiman > 0) {
+            // HAL XARIIQ: Si uusan u cidhiidhiyin sanduuqa
+            statusText.innerHTML = `La helay: ${count} ciyaaryahan | Maqan: ${dhiman}`;
+            statusText.style.color = color;
+        } else {
+            statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
+            statusText.style.color = "#2ecc71";
         }
     }
 });
