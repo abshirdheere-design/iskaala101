@@ -13,7 +13,7 @@ let temporaryScore = 0; // Dhibcaha urursanaya ka hor 101
 let setsOfTopPlayer = [];
 let setsOfLeftPlayer = [];
 let setsOfRightPlayer = [];
-let dragStartIndex = null;
+
 
 const pointValues = { 
     '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
@@ -303,13 +303,6 @@ function renderSets(elementId, sets) {
         area.appendChild(setDiv);
     });
 }
-
-renderSets("my-table-sets", myOpenedSets);          // Adiga
-renderSets("top-table", setsOfTopPlayer);           // Kore
-renderSets("left-table", setsOfLeftPlayer);         // Bidix
-renderSets("right-table", setsOfRightPlayer);       // Midig
-
-
 
 socket.on("updateTableUI", (data) => {
     const { playerId, allSets, nextRequiredPoints } = data;
