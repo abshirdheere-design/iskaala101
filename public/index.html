@@ -7,7 +7,14 @@
     <link rel="stylesheet" href="style.css?v=1.0.1">
 </head>
 <body>
-
+<script>
+    console.log("TEST: HTML-ka dhexdiisa waa laga arki karaa!");
+    if (typeof io !== 'undefined') {
+        console.log("TEST: Socket.io waa la helay!");
+    } else {
+        console.warn("TEST: Socket.io lama helin!");
+    }
+</script>
 <!-- 1. SETUP SCREEN -->
 <div id="setup-screen">
     <h1 style="color: #f1c40f;">Ku soo dhawaaw Turubka</h1>
