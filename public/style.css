@@ -904,26 +904,30 @@ body {
 
 /* Ogaanshaha inta magaca soo galisay */
 #waiting-room {
-    background: rgba(0, 0, 0, 0.9); /* Wax yar ka dhig madow si qoraalka u muuqdo */
+    background: rgba(10, 10, 10, 0.95); /* Madow cufan si uusan hufan u noqon */
     padding: 30px;
     border-radius: 20px;
-    width: 90%;            /* Saamiga shaashadda */
-    max-width: 500px;      /* Waxaan ka dhignay 500 si uu boos u helo */
+    width: 90%;
+    max-width: 500px;
     margin: 50px auto;
-    box-shadow: 0 0 25px rgba(241, 196, 15, 0.3);
-    border: 2px solid #f1c40f; /* Xuduud jaalle ah si uu u qurxiyo */
-    min-height: 250px;     /* Dherer go'an si uusan u gariirin markay magacyadu soo galaan */
+    box-shadow: 0 0 30px rgba(241, 196, 15, 0.4);
+    border: 2px solid #f1c40f;
+    min-height: 300px; /* Wax yar kordhi dhererka */
     display: flex;
     flex-direction: column;
     align-items: center;
+    position: relative; /* Muhiim ah */
+    z-index: 1000;      /* Hubi inuu ka sareeyo wax kasta oo kale */
+    overflow-y: auto;   /* Haddii magacyadu bataan, scroll ha yeesho */
 }
 
 #waiting-status {
-    margin-top: 20px;
-    font-size: 1.2rem;
-    font-weight: bold;
-    line-height: 1.6;      /* Kala fogee labada xariiq */
-    text-shadow: 1px 1px 2px black;
+    margin-top: auto;   /* Hoos u riix fariinta si ay magacyada uga hoosayso */
+    padding: 15px;
+    font-size: 1.3rem;
+    color: #2ecc71;     /* Midab cagaar ah oo dhalaalaya */
+    text-align: center;
+    width: 100%;
 }
 
 #players-list div {
