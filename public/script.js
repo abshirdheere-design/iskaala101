@@ -38,32 +38,24 @@ function renderMyHand() {
         cardDiv.dataset.index = index;
         cardDiv.draggable = true;
 
-        // 1. U beddel Suit-ka xarafka faylka SVG-gu aqoonsan yahay
-        // Tusaale: '♠' -> 's', '♥' -> 'h', '♦' -> 'd', '♣' -> 'c'
+        // U beddel Suits-ka xarfaha faylka (s, h, d, c)
         const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
         const suitLetter = suitMap[card.suit] || 's';
-        
-        // 2. Dhis magaca faylka (Tusaale: "10s.svg")
         const fileName = `${card.value}${suitLetter}.svg`;
 
-        // 3. Ku rid sawirka SVG-ga gudaha kaarka
+        // Halkaan ayuu isbeddelka weyn ku jiraa (Isticmaalka Img)
         cardDiv.innerHTML = `
-            <img src="/cards/${fileName}" alt="${card.value}${card.suit}" 
+            <img src="/cards/${fileName}" 
                  style="width: 100%; height: 100%; pointer-events: none; border-radius: 5px;">
         `;
 
-        // --- CLICK EVENT ---
-        cardDiv.onclick = (e) => {
+        cardDiv.onclick = () => {
             card.selected = !card.selected;
             renderMyHand();
             if (typeof calculateTemporaryScore === "function") calculateTemporaryScore();
         };
 
-        // --- DRAG EVENTS ---
-        cardDiv.addEventListener("dragstart", (e) => {
-            dragStartIndex = index;
-            e.target.style.opacity = "0.5";
-        });
+        cardDiv.addEventListener("dragstart", (e) => { dragStartIndex = index; e.target.style.opacity = "0.5"; });
         cardDiv.addEventListener("dragover", (e) => e.preventDefault());
         cardDiv.addEventListener("drop", handleDrop);
 
@@ -316,7 +308,6 @@ socket.on("updateTableUI", (data) => {
     const tableArea = document.getElementById("table-area");
     if (!tableArea) return;
 
-    // 1. Hubi in ID-ga uu yahay mid sax ah oo HTML-ku aqbali karo
     const safeId = playerId.replace(/[^a-zA-Z0-9_-]/g, "");
 
     let playerTable = document.getElementById(`table-${safeId}`);
@@ -327,10 +318,10 @@ socket.on("updateTableUI", (data) => {
         tableArea.appendChild(playerTable);
     }
 
-    // 2. Nadiifi miiska
+    // 1. Nadiifi miiska ka hor intaanan dib u sawirin
     playerTable.innerHTML = "";
 
-    // 3. Ku dar set-yada
+    // 2. halkan dhig koodhka cusub ee sawirada (SVG) isticmaalaya
     allSets.forEach(set => {
         const setDiv = document.createElement("div");
         setDiv.classList.add("set");
@@ -338,14 +329,21 @@ socket.on("updateTableUI", (data) => {
         set.forEach(card => {
             const cardDiv = document.createElement("div");
             cardDiv.classList.add("card", "mini-card");
-            cardDiv.innerHTML = `${card.value}${card.suit}`;
+
+            // Mapping-ka Suit-ka
+            const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
+            const suitLetter = suitMap[card.suit] || 's';
+            const fileName = `${card.value}${suitLetter}.svg`;
+
+            // Sawirka SVG-ga
+            cardDiv.innerHTML = `<img src="/cards/${fileName}" style="width: 100%; height: 100%; border-radius: 2px;">`;
             setDiv.appendChild(cardDiv);
         });
 
         playerTable.appendChild(setDiv);
     });
 
-    // 4. Update next required points
+    // 3. Update dhibcaha loo baahan yahay
     const req = document.getElementById("requiredPoints");
     if (req) req.innerText = nextRequiredPoints;
 });
@@ -635,22 +633,16 @@ socket.on("yourTurn", (playerId) => {
 socket.on("updateDiscardPile", (card) => {
     const pile = document.getElementById("discard-pile");
     if (!pile) return;
-
     pile.innerHTML = "";
 
     if (card) {
+        const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
+        const suitLetter = suitMap[card.suit] || 's';
+        const fileName = `${card.value}${suitLetter}.svg`;
+
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
-
-        const isRed = (card.suit === '♥' || card.suit === '♦');
-        cardDiv.style.color = isRed ? "red" : "black";
-
-        cardDiv.innerHTML = `
-            <div class="card-top"><span>${card.value}</span><span>${card.suit}</span></div>
-            <div class="card-center">${card.suit}</div>
-            <div class="card-bottom"><span>${card.suit}</span><span>${card.value}</span></div>
-        `;
-
+        cardDiv.innerHTML = `<img src="/cards/${fileName}" style="width: 100%; height: 100%; border-radius: 5px;">`;
         pile.appendChild(cardDiv);
     }
 });
