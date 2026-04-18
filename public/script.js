@@ -472,11 +472,14 @@ socket.on("waitingRoomUpdate", (data) => {
     const listArea = document.getElementById("players-list");
     const statusText = document.getElementById("waiting-status");
     
+    // Hubi in xogtu jirto, haddii kale jooji
+    if (!data || !data.players) return;
+
     if (listArea) {
         listArea.innerHTML = ""; 
         data.players.forEach(p => {
             const pDiv = document.createElement("div");
-            pDiv.className = "player-list-item"; // Waxaad ku qurxin kartaa CSS
+            pDiv.style.cssText = "padding:10px; margin:5px; background:rgba(255,255,255,0.1); border-radius:5px;";
             pDiv.innerHTML = `✅ <b>${p.name}</b> waa diyaar`;
             listArea.appendChild(pDiv);
         });
@@ -484,19 +487,28 @@ socket.on("waitingRoomUpdate", (data) => {
 
     if (statusText) {
         const count = data.players.length;
-        let dhiman = 4 - count; // Maadaama ciyaartu tahay 4 qof
-        
-        // Farriimaha loo qorayo ciyaartoyda
-        if (dhiman === 3) {
-            statusText.innerText = "3 qof ayaa dhiman weli...";
-        } else if (dhiman === 2) {
-            statusText.innerText = "2 qof ayaa dhiman weli...";
-        } else if (dhiman === 1) {
-            statusText.innerText = "1 qof ayaa dhiman weli...";
-        } else if (dhiman === 0) {
-            statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
-        } else {
-            statusText.innerText = `Ciyaartoyda la helay: ${count}/4`;
+        const dhiman = 4 - count; 
+
+        // Isticmaalka Switch si uu koodhku u nadiifnaado
+        switch(dhiman) {
+            case 3:
+                statusText.innerText = "3 qof ayaa dhiman weli...";
+                statusText.style.color = "#f1c40f"; // Jaalle
+                break;
+            case 2:
+                statusText.innerText = "2 qof ayaa dhiman weli...";
+                statusText.style.color = "#e67e22"; // Oranji
+                break;
+            case 1:
+                statusText.innerText = "1 qof ayaa dhiman! Diyaar garow...";
+                statusText.style.color = "#e74c3c"; // Cas
+                break;
+            case 0:
+                statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
+                statusText.style.color = "#2ecc71"; // Cagaar
+                break;
+            default:
+                statusText.innerText = `Ciyaartoyda la helay: ${count}/4`;
         }
     }
 });
