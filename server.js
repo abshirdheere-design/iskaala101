@@ -35,8 +35,6 @@ function createDeck() {
     return shuffle(newDeck);
 }
 
-
-
 function getCardPoints(value) {
     if (['J', 'Q', 'K'].includes(value)) return 10;
     if (value === 'A') return 11;
@@ -84,19 +82,21 @@ function updateRoomPlayers(roomId) {
     });
 
     // DIR UPDATEOPPONENTS – TANI AYAAD KA MAQNAYD
-   room.players.forEach((player, index) => {
-    // index-1 (Midig), index-2 (Kore), index-3 (Bidix)
-    const right = room.players[(index - 1 + room.players.length) % room.players.length];
-    const top   = room.players[(index - 2 + room.players.length) % room.players.length];
-    const left  = room.players[(index - 3 + room.players.length) % room.players.length];
+    room.players.forEach((player, index) => {
+        const left  = room.players[(index + 1) % room.players.length];
+        const top   = room.players[(index + 2) % room.players.length];
+        const right = room.players[(index + 3) % room.players.length];
 
-    io.to(player.id).emit("updateOpponents", {
-        right: right && right.id !== player.id ? { name: right.name } : null,
-        top:   top && top.id !== player.id     ? { name: top.name } : null,
-        left:  left && left.id !== player.id   ? { name: left.name } : null
+        io.to(player.id).emit("updateOpponents", {
+            left:  left  ? { name: left.name } : null,
+            top:   top   ? { name: top.name } : null,
+            right: right ? { name: right.name } : null
+        });
     });
-});
 }
+
+
+
 
 
 function nextTurn(roomId) {
@@ -106,24 +106,16 @@ function nextTurn(roomId) {
     // 🔥 Masax timer-kii hore
     if (room.turnTimeout) clearTimeout(room.turnTimeout);
 
-    // 🔄 Wareegga lidka saacadda (Counter-clockwise)
-    // Waxaan isticmaalnaa (index - 1 + length) % length
-    room.activePlayerIndex = (room.activePlayerIndex - 1 + room.players.length) % room.players.length;
-
-    // Dib u deji xaaladda qof kasta (Action reset)
+    room.activePlayerIndex = (room.activePlayerIndex + 1) % room.players.length;
     room.players.forEach(p => p.hasActioned = false);
 
     const currentPlayer = room.players[room.activePlayerIndex];
-    
-    // U sheeg dhammaan ciyaartoyda qofka doorka leh
     io.to(roomId).emit('yourTurn', currentPlayer.id);
-    
-    // Cusboonaysii UI-ga (Iftiinka magacyada iyo xogta kale)
     updateRoomPlayers(roomId);
 
-    // 🔥 Server-side safety timer (35 seconds)
+    // 🔥 Server-side safety timer
     room.turnTimeout = setTimeout(() => {
-        console.log(`Auto-skipping player in room ${roomId} (Counter-clockwise move)`);
+        console.log(`Auto-skipping player in room ${roomId}`);
         nextTurn(roomId);
     }, 35000);
 }
@@ -259,50 +251,38 @@ socket.on("drawCard", () => {
 });
 
     /* 4. PLAYER OPENS (101 Logic) */
-socket.on("playerOpens", (data) => {
-    const room = rooms[socket.roomId];
-    if (!room || !room.gameStarted) return;
+    socket.on("playerOpens", (data) => {
+        const room = rooms[socket.roomId];
+        if (!room || !room.gameStarted) return;
 
-    const player = room.players.find(p => p.id === socket.id);
-    if (!player || room.players[room.activePlayerIndex].id !== socket.id) return;
+        const player = room.players.find(p => p.id === socket.id);
+        if (!player || room.players[room.activePlayerIndex].id !== socket.id) return;
 
-    // 1. FLAT CARDS: Isku gee dhammaan kaararka qofku soo diray
-    const allCardsToOpen = data.allSets.flat();
-    
-    // 2. SERVER-SIDE CALCULATION: Xisaabi dhibcaha halkan si aan laguugu qishin
-    const totalPoints = allCardsToOpen.reduce((sum, c) => {
-        return sum + getCardPoints(c.value);
-    }, 0);
+        const totalPoints = data.cards.reduce((sum, c) => sum + (c.points || 0), 0);
+        const required = player.isOpened ? 1 : (player.pickedFromDiscard ? room.lastOpenPoints : 101);
 
-    // 3. LOGIC CHECK: Ma gaaray 101 ama iskaalihii hore?
-    const required = player.isOpened ? 1 : (player.pickedFromDiscard ? room.lastOpenPoints : 101);
+        if (totalPoints < required) {
+            return socket.emit("notification", `Dhibcahaagu ma gaarin ${required}!`);
+        }
 
-    if (totalPoints < required) {
-        return socket.emit("notification", `Dhibcahaagu ma gaarin ${required}! Waxaad haysaa: ${totalPoints}`);
-    }
+        const cardIdsToRemove = data.cards.map(c => c.id);
+        player.hand = player.hand.filter(c => !cardIdsToRemove.includes(c.id));
+        player.isOpened = true;
+        player.openedSets.push(data.cards);
 
-    // 4. SYNC HAND: Ka saar kaararka gacantiisa (isticmaal ID-yada)
-    const cardIdsToRemove = allCardsToOpen.map(c => c.id);
-    player.hand = player.hand.filter(c => !cardIdsToRemove.includes(c.id));
-    
-    player.isOpened = true;
-    player.openedSets.push(...data.allSets);
+        if (totalPoints >= room.lastOpenPoints) {
+            room.lastOpenPoints = totalPoints + 1;
+        }
 
-    // Iskaala Rule: Cusboonaysii dhibcaha xiga ee loo baahan yahay
-    if (totalPoints >= room.lastOpenPoints) {
-        room.lastOpenPoints = totalPoints + 1;
-    }
+        io.to(socket.roomId).emit("updateTableUI", {
+            playerId: socket.id,
+            allSets: player.openedSets,
+            nextRequiredPoints: room.lastOpenPoints
+        });
 
-    // U sheeg qof kasta in miisku isbeddelay
-    io.to(socket.roomId).emit("updateTableUI", {
-        playerId: socket.id,
-        allSets: player.openedSets,
-        nextRequiredPoints: room.lastOpenPoints
-    });
-
-    socket.emit("startHand", player.hand);
-    updateRoomPlayers(socket.roomId);
-});
+        socket.emit("startHand", player.hand);
+        updateRoomPlayers(socket.roomId);
+    }); // <--- Halkan waxaa ku xiran playerOpens
 
     /* 5. PLAY CARD (Tuurista) */
     socket.on("playCard", (card) => {
