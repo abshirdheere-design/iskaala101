@@ -542,35 +542,40 @@ socket.on("playersUpdate", (data) => {
 
 /* ================= GAME START LISTENER ================= */
 socket.on("matchFound", (data) => {
-    // 1. Qari shaashadaha hore
-    const setupScreen = document.getElementById("setup-screen");
-    const waitingRoom = document.getElementById("waiting-room");
-    
-    if (setupScreen) setupScreen.style.display = "none";
-    if (waitingRoom) waitingRoom.style.display = "none"; // Tan ayaa muhiim ah!
+    console.log("Match Found! Sugaya fariinta u dambaysa...");
 
-    // 2. Muuji HEADER-KA
-    const mainHeader = document.getElementById("main-header");
-    if (mainHeader) mainHeader.style.display = "flex";
+    // 1. Ha qarin waiting-room isla markiiba.
+    // Waxaan siinaynaa 1.5 ilbiriqsi si uu qofku u arko "Ciyaartu way bilaabanaysaa..."
+    setTimeout(() => {
+        const setupScreen = document.getElementById("setup-screen");
+        const waitingRoom = document.getElementById("waiting-room");
+        
+        if (setupScreen) setupScreen.style.display = "none";
+        if (waitingRoom) waitingRoom.style.display = "none";
 
-    // 3. Muuji Miiska Ciyaarta
-    const gameTable = document.getElementById("game-table");
-    if (gameTable) {
-        gameTable.style.display = "flex";
-        gameTable.style.visibility = "visible";
-    }
+        // 2. Muuji HEADER-KA
+        const mainHeader = document.getElementById("main-header");
+        if (mainHeader) mainHeader.style.display = "flex";
 
-    // 4. Muuji qaybta gacanta (Hand section)
-    const myHandSection = document.getElementById("my-hand-section");
-    if (myHandSection) myHandSection.style.display = "flex";
+        // 3. Muuji Miiska Ciyaarta
+        const gameTable = document.getElementById("game-table");
+        if (gameTable) {
+            gameTable.style.display = "flex";
+            gameTable.style.visibility = "visible";
+        }
 
-    // 5. Sax magaca ciyaaryahanka
-    const nameInput = document.getElementById("nameInput");
-    const displayName = document.getElementById("display-name");
-    if (displayName && nameInput) displayName.textContent = nameInput.value;
+        // 4. Muuji qaybta gacanta (Hand section)
+        const myHandSection = document.getElementById("my-hand-section");
+        if (myHandSection) myHandSection.style.display = "flex";
 
-    console.log("Ciyaartu waa bilaabatay, qolkii sugitaanka waa la xiray.");
-    renderMyHand();
+        // 5. Sax magaca ciyaaryahanka
+        const nameInput = document.getElementById("nameInput");
+        const displayName = document.getElementById("display-name");
+        if (displayName && nameInput) displayName.textContent = nameInput.value;
+
+        console.log("Ciyaartu hadda ayay dhab ahaan u bilaabatay.");
+        renderMyHand();
+    }, 1500); // 1500ms = 1.5 ilbiriqsi
 });
 
 
