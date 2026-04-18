@@ -5,14 +5,15 @@ const socket = io();
 let myHand = [];
 let isMyTurn = false;
 let hasDrawn = false;
-let pickedFromDiscard = false;   // Inuu tuurista ka soo qaatay (Xeerka 101)
-let isOpened = false;            // Inuu hore u degay (Opened 101)
+let pickedFromDiscard = false;   
+let isOpened = false;           
 let iHaveOpened = false; 
-let myOpenedSets = []; // Meesha lagu kaydiyo kaararka aad degtay
-let temporaryScore = 0; // Dhibcaha urursanaya ka hor 101
-let setsOfTopPlayer = [];
-let setsOfLeftPlayer = [];
-let setsOfRightPlayer = [];
+let myOpenedSets = []; 
+let temporaryScore = 0; 
+// --- KU DAR KUWAN OO KALIYA ---
+let dragStartIndex = null; 
+let touchStartX, touchStartY;
+let originalElement = null;
 
 const pointValues = { 
     '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
@@ -218,23 +219,25 @@ function handleResetDhigista() {
     console.log("Kaararkii waa la soo celiyay, score-kiina waa la eberyeeyay.");
 }
 
-let touchStartX, touchStartY;
-let originalElement = null;
-let dragStartIndex = null; // Hubi inuu kan kor yaallo
+
+
+/* ================= DRAG & DROP LOGIC ================= */
 
 function handleDragStart(e) {
     const card = e.target.closest(".card");
     if (!card) return;
     
-    // Halkan 'let' ha ku qorin, si uu u isticmaalo kii dusha sare ka furnaa
+    // Halkan 'let' ha ku qorin, si uu u isticmaalo kii dusha sare
     dragStartIndex = +card.dataset.index; 
 }
+
+/* ================= TOUCH LOGIC (MOBILE) ================= */
 
 function handleTouchStart(e) {
     const card = e.target.closest(".card");
     if (!card) return;
 
-    // Halkan isna 'let' ha ku qorin
+    // Halkan 'let' ha ku qorin
     dragStartIndex = +card.dataset.index; 
     
     const touch = e.touches[0];
@@ -245,46 +248,55 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
     if (!originalElement) return;
-    
-    // Jooji in boggu kor iyo hoos u socdo (Scroll) marka la jiidayo kaarka
     if (e.cancelable) e.preventDefault(); 
 
     const touch = e.touches[0];
     const dx = touch.clientX - touchStartX;
     const dy = touch.clientY - touchStartY;
 
-    // Muuqaal ahaan kaarku ha raaco farta
     originalElement.style.transform = `translate(${dx}px, ${dy}px) scale(1.1)`;
     originalElement.style.zIndex = "1000";
 }
 
 function handleTouchEnd(e) {
-    if (!originalElement) return;
+    if (!originalElement || dragStartIndex === null) return;
 
     const touch = e.changedTouches[0];
-    // Hel waxa ka hooseeya farta meesha ay ku dhammaday
     const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
     const dropCard = dropTarget ? dropTarget.closest(".card") : null;
 
     if (dropCard && dropCard !== originalElement) {
         const dragEndIndex = +dropCard.dataset.index;
         
-        // Bedel booska (Swap Logic)
+        // Swap Logic
         const temp = myHand[dragStartIndex];
         myHand[dragStartIndex] = myHand[dragEndIndex];
         myHand[dragEndIndex] = temp;
         
-        // Nadiifi oo dib u sawir
         myHand.forEach(c => c.selected = false);
         renderMyHand();
     } else {
-        // Haddii meel bannaan lagu tuuro, soo celi booska
         originalElement.style.transform = "";
         originalElement.style.zIndex = "";
     }
     
     originalElement = null;
-    dragStartIndex = null;
+    dragStartIndex = null; // Dib u eberree
+}
+
+function handleDrop(e) {
+    const dropCard = e.target.closest(".card");
+    if (!dropCard || dragStartIndex === null) return;
+
+    const dragEndIndex = +dropCard.dataset.index;
+
+    const temp = myHand[dragStartIndex];
+    myHand[dragStartIndex] = myHand[dragEndIndex];
+    myHand[dragEndIndex] = temp;
+
+    myHand.forEach(c => c.selected = false);
+    dragStartIndex = null; 
+    renderMyHand();
 }
 
 /* ================= ACTIONS ================= */
@@ -295,53 +307,51 @@ function handleDhigista() {
     let selectedCards = myHand.filter(c => c.selected);
     if (selectedCards.length < 3) return alert("Koox kasta waa inay ugu yaraan 3 kaar noqotaa!");
 
-    // 1. Hubi haddii kooxda hadda la doortay ay sax tahay
     if (!isSerial(selectedCards) && !isSet(selectedCards)) {
         return alert("Kaararka aad dooratay ma ahan koox sax ah (Set ama Serial).");
     }
 
-    // 2. Xisaabi dhibcaha kooxdan cusub
     let currentSetScore = selectedCards.reduce((sum, c) => sum + (pointValues[c.value] || 0), 0);
 
-    if (!isOpened) { // Halkan waxaan u isticmaalnay 'isOpened' oo ah state-ka rasmiga ah
-        // --- URURINTA KUMEEL-GAARKA AH ---
+    if (!isOpened) {
+        // --- WEJI-GA 1aad: URURINTA 101 ---
         temporaryScore += currentSetScore;
         myOpenedSets.push([...selectedCards]); 
 
-        // Ka saar gacanta si ku-meel-gaar ah
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
         renderMyTableSets();
 
-        // 3. Xeerka 101: Haddii wadarta kumeel-gaarka ah ay gaarto 101
         if (temporaryScore >= 101) {
             const hasFourCardGroup = myOpenedSets.some(set => set.length >= 4);
 
             if (!hasFourCardGroup) {
-                // Haddii dhibcuhu 101 gaareen laakiin aan la haysan 4-xabo
                 alert("101 waad gaartay, laakiin xeerka Iskaala wuxuu rabaa ugu yaraan hal koox oo 4+ kaar ah. Sii wad dhigista!");
                 return; 
             }
 
-            // 🔥 Hadda u dir Server-ka dhammaan wixii miiska kumeel-gaarka ah saarnaa
-            isOpened = true; // State-ka guud u beddel true
+            // Markii shuruuduhu fulaan u dir server-ka
             socket.emit("playerOpens", {
                 allSets: myOpenedSets, 
                 totalScore: temporaryScore
             });
 
-            alert("Hambalyo! Waad degtay. Dhibcahaaga: " + temporaryScore);
+            isOpened = true; 
+            alert("Hambalyo! Waad degtay.");
         } else {
-            alert(`Kooxda waa la qabtay. Wadarta hadda: ${temporaryScore}. Sii wad ilaa 101!`);
+            alert(`Kooxda waa la qabtay. Wadarta: ${temporaryScore}. Sii wad ilaa 101!`);
         }
 
     } else {
-        // Haddii uu qofku hore u degay (Turn-yadii hore)
+        // --- WEJI-GA 2aad: HORE AYAAD U DEGTAY ---
+        // Kaliya u dir server-ka. UI-ga ha taaban, ha u oggolaado server-ka inuu update-ka soo celiyo
         socket.emit("addToTable", { cards: selectedCards });
-        myOpenedSets.push([...selectedCards]);
+        
+        // Kaliya ka saar gacantaada
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
-        renderMyTableSets();
+        
+        // Xusuusin: renderMyTableSets() waxaa yeelan doona socket.on("updateTableUI")
     }
 }
 
@@ -449,13 +459,21 @@ renderSets("right-table", setsOfRightPlayer);       // Midig
 socket.on("updateTableUI", (data) => {
     const { playerId, allSets, nextRequiredPoints } = data;
 
+    // 1. Ma anigaa mise waa qof kale?
+    // Haddii ay adiga tahay, cusboonaysii array-gaaga
+    if (playerId === socket.id) {
+        myOpenedSets = allSets;
+        renderMyTableSets(); // Function-kaagii hore ee quruxda badnaa
+        return; 
+    }
+
+    // 2. Haddii ay dadka kale tahay (Dynamic Rendering)
     const tableArea = document.getElementById("table-area");
     if (!tableArea) return;
 
-    // 1. Hubi in ID-ga uu yahay mid sax ah oo HTML-ku aqbali karo
     const safeId = playerId.replace(/[^a-zA-Z0-9_-]/g, "");
-
     let playerTable = document.getElementById(`table-${safeId}`);
+
     if (!playerTable) {
         playerTable = document.createElement("div");
         playerTable.id = `table-${safeId}`;
@@ -463,27 +481,29 @@ socket.on("updateTableUI", (data) => {
         tableArea.appendChild(playerTable);
     }
 
-    // 2. Nadiifi miiska
     playerTable.innerHTML = "";
 
-    // 3. Ku dar set-yada
     allSets.forEach(set => {
         const setDiv = document.createElement("div");
-        setDiv.classList.add("set");
+        setDiv.className = "card-set"; // Isticmaal isla class-kaaga
 
         set.forEach(card => {
-            const cardDiv = document.createElement("div");
-            cardDiv.classList.add("card", "mini-card");
-            cardDiv.innerHTML = `${card.value}${card.suit}`;
-            setDiv.appendChild(cardDiv);
-        });
+            // Halkan ku dar sawirkii SVG-ga ahaa halkii aad qoraal ka dhigi lahayd
+            const suitMap = { '♣': 'c', '♦': 'd', '♥': 'h', '♠': 's' };
+            const suitLetter = suitMap[card.suit] || card.suit.toLowerCase();
+            const imageName = `${card.value.toLowerCase()}${suitLetter}.svg`;
 
+            const cDiv = document.createElement("div");
+            cDiv.className = "card small"; // Kaarar yaryar oo miiska ah
+            cDiv.innerHTML = `<img src="cards/${imageName}" style="width:100%; height:100%;">`;
+            setDiv.appendChild(cDiv);
+        });
         playerTable.appendChild(setDiv);
     });
 
-    // 4. Update next required points
-    const req = document.getElementById("requiredPoints");
-    if (req) req.innerText = nextRequiredPoints;
+    if (document.getElementById("requiredPoints")) {
+        document.getElementById("requiredPoints").innerText = nextRequiredPoints;
+    }
 });
 
 
