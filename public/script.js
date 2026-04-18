@@ -13,6 +13,7 @@ let temporaryScore = 0; // Dhibcaha urursanaya ka hor 101
 let setsOfTopPlayer = [];
 let setsOfLeftPlayer = [];
 let setsOfRightPlayer = [];
+let dragStartIndex = null;
 
 const pointValues = { 
     '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
@@ -85,29 +86,6 @@ function renderMyHand() {
     });
 }
 
-function isSerial(cards) {
-    if (cards.length < 3) return false;
-
-    // Sort by value
-    let sorted = [...cards].sort((a, b) => a.rank - b.rank);
-
-    // Check same suit
-    let sameSuit = sorted.every(c => c.suit === sorted[0].suit);
-    if (!sameSuit) return false;
-
-    // Check consecutive
-    for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i].rank !== sorted[i - 1].rank + 1) {
-            return false;
-        }
-    }
-    return true;
-}
-
-function isSet(cards) {
-    if (cards.length < 3) return false;
-    return cards.every(c => c.value === cards[0].value);
-}
 
 /* ================= XISAABINTA DHIBCAHA (MELDS) ================= */
 function calculateTemporaryScore() {
@@ -299,15 +277,6 @@ function handleSort() {
     renderMyHand();
 }
 
-
-let dragStartIndex = null;
-
-function handleDragStart(e) {
-    const card = e.target.closest(".card");
-    if (!card) return;
-    dragStartIndex = +card.dataset.index;
-}
-
 function handleDragOver(e) {
     e.preventDefault(); // Waa muhiim si drop u shaqeeyo
 }
@@ -427,31 +396,6 @@ function isSerial(cards) {
 
     return true;
 }
-
-
-function isSerial(cards) {
-    if (cards.length < 3) return false;
-
-    const suit = cards[0].suit;
-    if (!cards.every(c => c.suit === suit)) return false;
-
-    const valueOrder = {
-        "6": 6, "7": 7, "8": 8, "9": 9, "10": 10,
-        "J": 11, "Q": 12, "K": 13, "A": 14
-    };
-
-    const mapped = cards.map(c => valueOrder[c.value]);
-    if (mapped.includes(undefined)) return false;
-
-    mapped.sort((a, b) => a - b);
-
-    for (let i = 0; i < mapped.length - 1; i++) {
-        if (mapped[i + 1] !== mapped[i] + 1) return false;
-    }
-
-    return true;
-}
-
 
 // Raadi function-ka bilaaba ciyaarta
 function startTheGame() {
