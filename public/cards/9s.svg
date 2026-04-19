@@ -2,12 +2,20 @@
             <rect width="294" height="444" x="3" y="3" rx="20" ry="20" fill="white" stroke="#333" stroke-width="3" />
             
             <g fill="#000000">
-                <text x="20" y="50" font-size="45" font-weight="bold" font-family="Arial">9</text>
-                <text x="20" y="90" font-size="35" font-family="Arial">♠</text>
+                <text x="20" y="45" font-size="40" font-weight="bold" font-family="Arial">9</text>
+                <text x="20" y="80" font-size="30" font-family="Arial">♠</text>
+            </g>
+            <g fill="#000000" transform="rotate(180, 275, 45)">
+                <text x="250" y="45" font-size="40" font-weight="bold" font-family="Arial">9</text>
+                <text x="250" y="80" font-size="30" font-family="Arial">♠</text>
             </g>
             <g fill="#000000" transform="rotate(180, 150, 225)">
-                <text x="20" y="50" font-size="45" font-weight="bold" font-family="Arial">9</text>
-                <text x="20" y="90" font-size="35" font-family="Arial">♠</text>
+                <text x="20" y="45" font-size="40" font-weight="bold" font-family="Arial">9</text>
+                <text x="20" y="80" font-size="30" font-family="Arial">♠</text>
+            </g>
+            <g fill="#000000" transform="rotate(360, 275, 405)">
+                <text x="250" y="405" font-size="40" font-weight="bold" font-family="Arial">9</text>
+                <text x="250" y="440" font-size="30" font-family="Arial">♠</text>
             </g>
             <text x="90" y="150" font-size="65" text-anchor="middle" fill="#000000">♠</text>
 <text x="210" y="150" font-size="65" text-anchor="middle" fill="#000000">♠</text>
