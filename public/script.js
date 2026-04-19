@@ -779,7 +779,6 @@ if (tuurBtn) {
 }
 
 /* ================= SOCKET SETUP ================= */
-const socket = io();
 
 // Halkan dhig koodhka debug-ga ah:
 socket.on("connect", () => {
