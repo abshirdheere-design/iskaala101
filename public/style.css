@@ -86,11 +86,10 @@ body {
 #game-table {
     position: relative;
     width: 100%;
-    height: 100vh;
+    height: calc(100vh - 60px); /* muhiim! */
+    margin-top: 60px; /* space header */
     overflow: hidden;
     z-index: 10;
-    /* In yar kor u qaad miiska oo dhan */
-    margin-top: -30px; 
 }
 
 /* Ku dar qaybtaan si aad u qariso walxaha aan loo baahnayn bilowga */
@@ -963,8 +962,16 @@ body {
 }
 
 .top-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    width: 100%;
+    padding: 0 20px;
+    background: rgba(0, 0, 0, 0.9);
+    border-bottom: 2px solid #f1c40f;
+    z-index: 1000;
 }
