@@ -1,3 +1,4 @@
+alert("Koodhka cusub waa kan shaqaynaya!");
 /* ================= SOCKET SETUP ================= */
 const socket = io();
 
