@@ -921,17 +921,31 @@ body {
 
     position: relative;
     z-index: 1000;
-
+    animation: fadeInRoom 0.5s ease-in-out;
     overflow-y: auto;
 }
 
 #waiting-status {
-    margin-top: 15px;   /* ❗ halkii auto */
+    /* --- Qaybta Hubinta (Test Section) --- */
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important; 
+    background: white !important;  /* Caddaan ka dhig si aad u aragto meesha uu yaallo */
+    color: black !important;      /* Qoraalka madow ka dhig */
+    z-index: 2000;                /* Kor u soo qaad */
+
+    /* --- Qaybta Naqshadda (Design Section) --- */
+    margin-top: 15px;
     padding: 15px;
     font-size: 1.3rem;
-    color: #2ecc71;
     text-align: center;
     width: 100%;
+    font-weight: bold;
+}
+
+#players-list {
+    width: 100%;
+    margin-bottom: 20px; /* Boos u sii fariinta dhiman */
 }
 
 #players-list div {
@@ -943,10 +957,11 @@ body {
     animation: slideIn 0.3s ease-out;
 }
 
-@keyframes slideIn {
-    from { opacity: 0; transform: translateX(-20px); }
-    to { opacity: 1; transform: translateX(0); }
+@keyframes fadeInRoom {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
+
 
 .top-bar {
     display: flex;
