@@ -469,7 +469,6 @@ document.getElementById("startGameBtn").onclick = () => {
 
 // --- KU DAR KANI (Waa muhiim si magacyada loo arko) ---
 socket.on("waitingRoomUpdate", (data) => {
-    // 1. Tani waa inay Console-ka ka soo muuqataa mar kasta oo qof ku soo biiro
     console.log("XOGTA SUGITAANKA:", data); 
 
     const statusText = document.getElementById("waiting-status");
@@ -483,34 +482,59 @@ socket.on("waitingRoomUpdate", (data) => {
     const count = data.players.length;
     const dhiman = 4 - count;
 
-    // 2. Hubi nambarka dhiman
     console.log("Ciyaartoyda hadda:", count, "| Dhiman:", dhiman);
 
-    // Sawir magacyada
+    // 🔹 Sawir magacyada ciyaartoyda
     if (listArea) {
         listArea.innerHTML = "";
+
         data.players.forEach(p => {
             const pDiv = document.createElement("div");
-            pDiv.style.cssText = "padding:8px; margin:5px; background:rgba(255,255,255,0.1); border-radius:5px;";
+            pDiv.style.cssText = `
+                padding:8px;
+                margin:5px;
+                background:rgba(255,255,255,0.1);
+                border-radius:5px;
+                width:100%;
+                text-align:center;
+            `;
             pDiv.innerHTML = `✅ <b>${p.name}</b> waa diyaar`;
             listArea.appendChild(pDiv);
         });
     }
 
-    // 3. Beddel farriinta
+    // 🔹 Fariinta hoose (status)
     if (statusText) {
+        statusText.style.display = "block";
+
         if (dhiman > 0) {
-            statusText.style.display = "block"; // Hubi inuu muuqdo
-            statusText.innerHTML = `Waxaa la helay: ${count}<br>Waxaa dhiman: ${dhiman}`;
-            
-            // Midabada
+            // Magacyada Somali
+            const magacyo = {
+                1: "hal ciyaartooy",
+                2: "laba ciyaartooy",
+                3: "saddex ciyaartooy"
+            };
+
+            const text = magacyo[dhiman] || `${dhiman} ciyaartooy`;
+
+            statusText.innerText = `Waxaa dhiman ${text}: ${count}/4`;
+
+            // Midabyo
             if (dhiman === 3) statusText.style.color = "#f1c40f";
-            if (dhiman === 2) statusText.style.color = "#e67e22";
-            if (dhiman === 1) statusText.style.color = "#e74c3c";
+            else if (dhiman === 2) statusText.style.color = "#e67e22";
+            else if (dhiman === 1) statusText.style.color = "#e74c3c";
+
         } else {
             statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
             statusText.style.color = "#2ecc71";
         }
+
+        // ✨ animation yar (smooth)
+        statusText.style.opacity = "0";
+        setTimeout(() => {
+            statusText.style.transition = "opacity 0.3s ease";
+            statusText.style.opacity = "1";
+        }, 50);
     }
 });
 
