@@ -38,19 +38,14 @@ function renderMyHand() {
         cardDiv.dataset.index = index;
         cardDiv.draggable = true;
 
-        // 1. Diyaarinta magaca kaarka (sida: 10s, jc, qh)
+        // U beddel Suits-ka xarfaha faylka (s, h, d, c)
         const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
         const suitLetter = suitMap[card.suit] || 's';
-        
-        // Halkan waxaan ku dhisaynaa magaca (tusaale: 'jc' ama '10s')
-        const cardName = `${card.value}${suitLetter}`; 
+        const fileName = `${card.value}${suitLetter}.svg`;
 
-        // 2. U yeer function-ka sawirka soo celinaya
-        const imageSrc = getCardImagePath(cardName);
-
-        // 3. Geli sawirka
+        // Halkaan ayuu isbeddelka weyn ku jiraa (Isticmaalka Img)
         cardDiv.innerHTML = `
-            <img src="${imageSrc}" 
+            <img src="/cards/${fileName}" 
                  style="width: 100%; height: 100%; pointer-events: none; border-radius: 5px;">
         `;
 
@@ -60,7 +55,6 @@ function renderMyHand() {
             if (typeof calculateTemporaryScore === "function") calculateTemporaryScore();
         };
 
-        // ... inta kale ee drag & drop (waa sideeda) ...
         cardDiv.addEventListener("dragstart", (e) => { dragStartIndex = index; e.target.style.opacity = "0.5"; });
         cardDiv.addEventListener("dragover", (e) => e.preventDefault());
         cardDiv.addEventListener("drop", handleDrop);
