@@ -247,20 +247,33 @@ function autoSplitIntoGroups(cards) {
 function handleSort() {
     const sortOrder = { 
         '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
-        'J': 11, 'Q': 12, 'K': 13, 'A': 14 
+        'j': 11, 'q': 12, 'k': 13, 'a': 14 
     };
 
+    // Suit-ka dhibco ayaan u siinaynaa si ay u kala dambeeyaan (s, h, d, c)
+    const suitOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
+
     myHand.sort((a, b) => {
+        const valA = String(a.value).toLowerCase();
+        const valB = String(b.value).toLowerCase();
+        
+        const rankA = sortOrder[valA] || 0;
+        const rankB = sortOrder[valB] || 0;
+
+        // --- DOOKHA 1AAD: Haddii aad rabto in (Ac, Kc, Qc) ay isku xigaan ---
+        // Marka hore isku keen Suits-ka (Calaamadda)
         if (a.suit !== b.suit) {
-            return a.suit.localeCompare(b.suit);
+            return suitOrder[b.suit] - suitOrder[a.suit];
         }
-        return (sortOrder[a.value] || 0) - (sortOrder[b.value] || 0);
+        
+        // Marka xigta, u kala saar nambar ahaan (Rank)
+        return rankB - rankA; // 'rankB - rankA' waxay ka dhigaysaa inuu A-ga ugu horreeyo
     });
 
     myHand.forEach(c => c.selected = false);
-
     renderMyHand();
 }
+
 
 function handleDragOver(e) {
     e.preventDefault(); // Waa muhiim si drop u shaqeeyo
