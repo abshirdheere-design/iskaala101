@@ -384,48 +384,26 @@ body {
 /* ================= PLAYER SLOTS (OTHERS) ================= */
 .player-slot {
     position: absolute;
-    z-index: 60;
+    left: 50% !important; /* Bartamaha ka bilow si uusan u lumin */
+    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: column;
     align-items: center;
-	z-index: 60;
-	left: 50%; 
-    transform: translate(-50%, -50%);
-	background: none !important;
-    box-shadow: none !important;
-    border: none !important;
+    z-index: 60;
 }
 
-/* TOP PLAYER */
-#player-top {
-    top: 10% !important; /* Magaxa midig/magaca bidix oo kor loo riixay */
-    left: 50%;
-    transform: translate(-50%, -50%);
-	background: none !important;
-    box-shadow: none !important;
-    border: none !important;
+#player-top { 
+    top: 12% !important; 
 }
 
-/* LEFT PLAYER */
-#player-left {
-    left: 50% !important;    /* 👈 Bartamaha ka bilow (Hore waxay u ahayd 16%) */
-    margin-left: -44% !important; /* 👈 Bidixda u durji */
+#player-left { 
     top: 38% !important; 
-    transform: translate(-50%, -50%);
-	background: none !important;
-    box-shadow: none !important;
-    border: none !important;
+    margin-left: -44% !important; /* U durji bidixda */
 }
 
-/* RIGHT PLAYER */
-#player-right {
-    left: 50% !important;    /* 👈 Bartamaha ka bilow (Hore waxay u ahayd 16%) */
-    margin-left: 44% !important;  /* 👈 Midigta u durji */
+#player-right { 
     top: 38% !important; 
-    transform: translate(-50%, -50%);
-	background: none !important;
-    box-shadow: none !important;
-    border: none !important;
+    margin-left: 44% !important;  /* U durji midigta */
 }
 
 
@@ -573,55 +551,52 @@ body {
 
 /* ================= MOBILE RESPONSIVE ================= */
 @media (max-width: 600px) {
-    /* 1. Miiska Cagaaran (Oval) - Aad kor ugu riix si uu u fogaado gacanta */
+    /* Miiska Cagaaran - Aad loo yareeyay dhererka, korna loo riixay */
     #game-table::before { 
         width: 96%; 
-        height: 32vh;        /* 👈 Aad loo yareeyay dhererka (Height) */
-        top: 25% !important;  /* 👈 Aad kor loo riixay (Top) */
+        height: 32vh !important;
+        top: 25% !important;
         border-radius: 50px; 
     }
 
-    /* 2. Kaararka Gacantaada - Inyar yaree si ay u banneyso shaashadda */
+    /* Kaararka Gacantaada - Yaree si ay u banneeyaan shaashadda */
     .card { 
-        width: 45px;         /* 👈 Waxyar ayaa la yareeyay */
-        height: 70px; 
-        font-size: 0.8rem; 
-        margin-left: -20px; 
+        width: 45px !important; 
+        height: 70px !important; 
+        margin-left: -20px !important; 
     }
     
-    .card:first-child { margin-left: 0; }
+    .card:first-child { margin-left: 0 !important; }
 
-    /* 3. Ciyaartoyda - Waa inay kor u raacaan miiska booskiisa cusub */
+    /* Ciyaartoyda Mobilka - Waa inay kor u raacaan miiska */
     #player-left {
-        left: 50% !important;
         margin-left: -46% !important; 
-        top: 25% !important; /* 👈 Miiska ayay la siman yihiin */
+        top: 25% !important;
         font-size: 0.8rem;
     }
     #player-right {
-        left: 50% !important;
         margin-left: 46% !important;  
-        top: 25% !important; /* 👈 Miiska ayay la siman yihiin */
+        top: 25% !important;
         font-size: 0.8rem;
     }
     
     #player-top {
-        top: 8% !important;
+        top: 10% !important;
     }
 
-    /* 4. Kaararka dhexda (Deck/Discard) - Iyagana kor u riix */
+    /* Deck-ga dhexda yaalla kor u riix */
     #center-area {
         top: 22% !important;
-        transform: translate(-50%, -50%) scale(0.8); /* 👈 Inyar yaree Deck-ga */
+        transform: translate(-50%, -50%) scale(0.8) !important;
     }
 
-    /* 5. Badhamada Action-ka */
+    /* Badhamada Action-ka */
     .action-buttons {
         gap: 5px;
         margin-bottom: 10px;
     }
     .action-buttons button {
-        padding: 6px 10px;
+        padding: 6px 12px;
         font-size: 11px;
     }
 }
@@ -1024,6 +999,7 @@ body {
 
 /* SHAASHADAHA WAAWEYN (Desktop Fix) */
 @media (min-width: 1100px) {
+    #player-top { top: 60px !important; }
     #player-left { margin-left: -580px !important; }
     #player-right { margin-left: 580px !important; }
 }
