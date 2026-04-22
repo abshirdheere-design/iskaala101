@@ -389,6 +389,8 @@ body {
     flex-direction: column;
     align-items: center;
 	z-index: 60;
+	left: 50%; 
+    transform: translate(-50%, -50%);
 	background: none !important;
     box-shadow: none !important;
     border: none !important;
@@ -408,6 +410,7 @@ body {
 #player-left {
     left: 16%;
     top: 35% !important; /* Magaca midig & Magaca bidix oo kor loo riixay */
+	margin-left: -48%; /* Shaashadaha yaryar */
     transform: translate(-50%, -50%);
 	background: none !important;
     box-shadow: none !important;
@@ -418,6 +421,7 @@ body {
 #player-right {
     right: 16%;
     top: 35% !important; /* Magaca midig & Magaca bidix oo kor loo riixay */
+	margin-left: 48%; /* Shaashadaha yaryar */
     transform: translate(50%, -50%);
 	background: none !important;
     box-shadow: none !important;
@@ -569,17 +573,42 @@ body {
 
 /* ================= MOBILE RESPONSIVE ================= */
 @media (max-width: 600px) {
+    /* 1. Miiska Cagaaran (Oval) */
     #game-table::before { 
         width: 95%; 
-        height: 50vh; 
-        border-radius: 100px; 
+        height: 45vh;      /* In yar hoos ka gaabi si boos loo helo */
+        border-radius: 80px; 
+        top: 40% !important;
     }
 
+    /* 2. Kaararka Gacantaada */
     .card { 
-        width: 55px; 
-        height: 85px; 
-        font-size: 0.9rem; 
-        margin-left: -25px; 
+        width: 50px;       /* In yar ka dhig 50px si ay u wada galaan */
+        height: 75px; 
+        font-size: 0.8rem; 
+        margin-left: -22px; 
+    }
+    
+    .card:first-child { margin-left: 0; } /* Kaarka kowaad margin ma u baahna */
+
+    /* 3. Magacyada Ciyaartoyda (Muhiim!) */
+    #player-left {
+        margin-left: -46% !important; /* Soo dhowee bartamaha */
+        font-size: 0.8rem;
+    }
+    #player-right {
+        margin-left: 46% !important;  /* Soo dhowee bartamaha */
+        font-size: 0.8rem;
+    }
+    
+    #player-top {
+        top: 12% !important;
+    }
+
+    /* 4. Badhamada Action-ka (Dhigo, Tuur) */
+    .action-buttons button {
+        padding: 8px 12px;
+        font-size: 12px;
     }
 }
 
@@ -977,4 +1006,13 @@ body {
     border-bottom: 2px solid #f1c40f;
     z-index: 9999;
     color: white;
+}
+
+@media (min-width: 1100px) {
+    #player-left {
+        margin-left: -580px !important; /* Meel go'an oo miiska dhabarka ah */
+    }
+    #player-right {
+        margin-left: 580px !important;  /* Meel go'an oo miiska dhabarka ah */
+    }
 }
