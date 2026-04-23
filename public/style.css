@@ -551,7 +551,7 @@ body {
 
 /* ================= MOBILE RESPONSIVE ================= */
 @media (max-width: 600px) {
-    /* Miiska Cagaaran - Aad loo yareeyay dhererka, korna loo riixay */
+    /* 1. Miiska Cagaaran */
     #game-table::before { 
         width: 96%; 
         height: 32vh !important;
@@ -559,45 +559,46 @@ body {
         border-radius: 50px; 
     }
 
-    /* Kaararka Gacantaada - Yaree si ay u banneeyaan shaashadda */
+    /* 2. Kaararka Gacantaada */
     .card { 
         width: 45px !important; 
         height: 70px !important; 
         margin-left: -20px !important; 
     }
-    
     .card:first-child { margin-left: 0 !important; }
 
-    /* Ciyaartoyda Mobilka - Waa inay kor u raacaan miiska */
-    #player-left {
-        margin-left: -46% !important; 
-        top: 25% !important;
-        font-size: 0.8rem;
-    }
-    #player-right {
-        margin-left: 46% !important;  
-        top: 25% !important;
-        font-size: 0.8rem;
-    }
-    
-    #player-top {
-        top: 10% !important;
-    }
+    /* 3. Ciyaartoyda Mobilka */
+    #player-left { margin-left: -46% !important; top: 25% !important; font-size: 0.8rem; }
+    #player-right { margin-left: 46% !important; top: 25% !important; font-size: 0.8rem; }
+    #player-top { top: 10% !important; }
 
-    /* Deck-ga dhexda yaalla kor u riix */
+    /* 4. Deck-ga */
     #center-area {
         top: 22% !important;
         transform: translate(-50%, -50%) scale(0.8) !important;
     }
 
-    /* Badhamada Action-ka */
+    /* 5. BADHAMADA IYO GACANTA (Halkan ayaa muhiim ah!) */
+    .player-hand-section {
+        z-index: 10000 !important;    /* Kor u qaad si aysan waxba u daboolin */
+        pointer-events: auto !important;
+        bottom: 10px !important;      /* Waxyar hoos u dhig si boos loo helo */
+    }
+
     .action-buttons {
         gap: 5px;
-        margin-bottom: 10px;
+        margin-bottom: 5px;
+        z-index: 10001 !important;    /* Badhamada ha ka sareeyaan wax walba */
+        pointer-events: auto !important;
     }
+
     .action-buttons button {
-        padding: 6px 12px;
-        font-size: 11px;
+        padding: 10px 8px !important; /* Ka dhig kuwo far weyn si loo taaban karo */
+        font-size: 12px;
+        font-weight: bold;
+        background: #f1c40f;
+        color: black;
+        border-radius: 10px;
     }
 }
 
