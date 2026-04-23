@@ -155,52 +155,54 @@ function handleDhigista() {
         return alert("Koox kasta waa inay ugu yaraan 3 kaar noqotaa!");
     }
 
-    // 1. Hubi haddii kooxda ay sax tahay
+    // 1. Hubi haddii kooxda ay sax tahay (Serial ama Set)
     if (!isSerial(selectedCards) && !isSet(selectedCards)) {
         return alert("Kaararka aad dooratay ma ahan koox sax ah (Set ama Serial).");
     }
 
-    // 2. Xisaabi dhibcaha
-    let currentSetScore = selectedCards.reduce(
-        (sum, c) => sum + (pointValues[c.value] || 0),
-        0
-    );
+    // 2. Xisaabi dhibcaha (Hubi in xarfaha loo beddelay lowercase)
+    let currentSetScore = selectedCards.reduce((sum, c) => {
+        const val = String(c.value).toLowerCase();
+        return sum + (pointValues[val] || 0);
+    }, 0);
 
     if (!isOpened) {
-        // --- URURIN ---
+        // --- WEJIGA FURITAANKA (URAARIN ILAA 101) ---
         temporaryScore += currentSetScore;
         myOpenedSets.push([...selectedCards]);
 
-        // Ka saar gacanta
+        // Ka saar gacanta oo dib u sawir
         myHand = myHand.filter(c => !c.selected);
-
         renderMyHand();
         renderMyTableSets();
 
-        // 3. Xeerka 101
+        // 3. Xeerka 101 iyo kooxda 4-ta ah
         if (temporaryScore >= 101) {
             const hasFourCardGroup = myOpenedSets.some(set => set.length >= 4);
 
             if (!hasFourCardGroup) {
-                return alert(
-                    "101 waad gaartay, laakiin waa inaad haysataa ugu yaraan hal koox oo 4+ kaar ah!"
-                );
+                // Haddii uusan haysan 4-xabo, waa inuu sii wadaa
+                alert("101 waad gaartay, laakiin waa inaad haysataa ugu yaraan hal koox oo 4+ kaar ah!");
+            } else {
+                // Hadda ayuu dhab ahaan u degay
+                isOpened = true;
+                iHaveOpened = true;
+
+                // U dir server-ka (Fiiro gaar ah: Server-kaaga wuxuu rabaa 'cards')
+                socket.emit("playerOpens", {
+                    cards: selectedCards, 
+                    allSets: myOpenedSets,
+                    totalScore: temporaryScore
+                });
+
+                alert("Hambalyo! Waad degtay. Dhibcahaaga: " + temporaryScore);
             }
-
-            isOpened = true;
-
-            socket.emit("playerOpens", {
-                allSets: myOpenedSets,
-                totalScore: temporaryScore
-            });
-
-            alert("Hambalyo! Waad degtay. Dhibcahaaga: " + temporaryScore);
         } else {
             alert(`Wadarta hadda: ${temporaryScore}. Sii wad ilaa 101!`);
         }
 
     } else {
-        // Haddii hore u degay
+        // --- HADDII UU HORE U DEGGAY (ADD TO TABLE) ---
         socket.emit("addToTable", { cards: selectedCards });
 
         myOpenedSets.push([...selectedCards]);
@@ -210,6 +212,19 @@ function handleDhigista() {
         renderMyTableSets();
     }
 }
+
+/* 4. MUHIIM: Ku dar xiriirka badhamada dhamaadka script.js */
+document.addEventListener("DOMContentLoaded", () => {
+    const dhigoBtn = document.getElementById("dhigoBtn");
+    if (dhigoBtn) {
+        dhigoBtn.onclick = handleDhigista;
+    }
+
+    const resetBtn = document.getElementById("resetBtn");
+    if (resetBtn) {
+        resetBtn.onclick = handleResetDhigista;
+    }
+});
 
 // 🔥 FUNCTION-KA KALA QAYBIYA KAARARKA (ALGORITHM)
 function autoSplitIntoGroups(cards) {
@@ -424,42 +439,60 @@ function startTheGame() {
 }
 
 function handleTuurista() {
-    if (!isMyTurn) return alert("Ma aha doorkaaga!");
+    if (!isMyTurn) return; // Iska daa alert-ka badan
 
-    // 1. Hubi inuu qofku kaar qaatay (server logic: p.hasActioned)
-    // Haddii gacantu tahay 14 → waa inuu qaataa turub
+    // 1. Hubi inuu kaar qaatay
     if (myHand.length === 14) {
-        return alert("Fadlan marka hore kaar qaado (Stock ama Discard)!");
+        alert("Fadlan marka hore kaar qaado!");
+        return;
     }
 
-    // 2. Hel kaarka la doortay
-    const selectedIndex = myHand.findIndex(card => card.selected === true);
+    // 2. XEERKA 101 (Kani waa kan mobilka ka xiraya):
+    // Haddii uu tuurista qaatay, waa inuu degay (isOpened)
+    if (pickedFromDiscard && !isOpened) {
+        const canOpenNow = calculateTemporaryScore() >= 101;
+        if (!canOpenNow) {
+            alert("Maadaama aad tuurista qaadatay, waa inaad degtaa (101)! Maadaama dhibcahaagu yaryihiin, dib u soo celi kaarka.");
+            return;
+        } else {
+            alert("Fadlan marka hore riix 'Dhigo' si aad u degto!");
+            return;
+        }
+    }
+
+    const selectedIndex = myHand.findIndex(c => c.selected);
     if (selectedIndex === -1) {
-        return alert("Fadlan dooro hal kaar oo aad tuurayso!");
+        alert("Dooro kaarka aad tuurayso!");
+        return;
     }
 
-    const cardToDiscard = myHand[selectedIndex];
+    // 3. XEERKA BATUUTADA
+    const remaining = myHand.length - 1;
+    if (remaining === 1 || remaining === 2) {
+        alert("Xeerka Batuutada: Ma kuu hari karaan 1 ama 2 xabo oo kaliya!");
+        return;
+    }
 
-    // 3. U dir server-ka
-    socket.emit("playCard", cardToDiscard);
+    const cardToPlay = myHand[selectedIndex];
+    socket.emit("playCard", cardToPlay);
 
-    // 4. Ka saar gacanta
+    // Nadiifi UI
     myHand.splice(selectedIndex, 1);
-
-    // 5. Deji state-ka
     isMyTurn = false;
     hasDrawn = false;
-
-    // 6. Dib u sawir gacanta
+    pickedFromDiscard = false;
     renderMyHand();
-
-    // 7. Update UI
-    const text = document.getElementById("turnText");
-    if (text) {
-        text.textContent = "Sugaya...";
-        text.style.color = "#f1c40f";
-    }
+    if (timerInterval) clearInterval(timerInterval);
 }
+
+/* ================= KEEP ALIVE (MOBILKA) ================= */
+// Koodhkan wuxuu soconayaa 10-kii ilbiriqsiba mar isagoo madax-bannaan
+setInterval(() => {
+    if (socket && socket.connected) {
+        socket.emit("ping_keep_alive"); 
+        console.log("Ping loo diray server-ka..."); // Tani waa tijaabo kaliya
+    }
+}, 10000); 
 
 
 /* ================= EVENT LISTENERS ================= */
