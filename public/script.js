@@ -1,7 +1,7 @@
-/* ================= SOCKET SETUP ================= */
+/* SOCKET SETUP */
 const socket = io();
 
-/* ================= STATE & GLOBAL VARIABLES ================= */
+/* STATE & GLOBAL VARIABLES */
 let myHand = [];
 let isMyTurn = false;
 let hasDrawn = false;
@@ -26,7 +26,7 @@ function karaaInuuDego(sets) {
     return hasFourOrMore;
 }
 
-/* ================= RENDER HAND (Cusboonaysiin) ================= */
+/* RENDER HAND (Cusboonaysiin) */
 function renderMyHand() {
     const area = document.getElementById("my-hand");
     if (!area) return;
@@ -41,7 +41,6 @@ function renderMyHand() {
         const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
         const suitLetter = suitMap[card.suit] || 's';
 
-        // 🔥 HALKAN SAX: .toLowerCase() ku dar card.value
         const val = String(card.value).toLowerCase();
         const fileName = `${val}${suitLetter}.svg`;
 
@@ -64,8 +63,7 @@ function renderMyHand() {
     });
 }
 
-
-/* ================= XISAABINTA DHIBCAHA (MELDS) ================= */
+/* XISAABINTA DHIBCAHA (MELDS) */
 function calculateTemporaryScore() {
     const selectedCards = myHand.filter(c => c.selected);
     if (selectedCards.length === 0) {
@@ -84,8 +82,6 @@ function calculateTemporaryScore() {
 
     return score;
 }
-
-
 
 function renderMyTableSets() {
     const tableArea = document.getElementById("my-table-sets");
@@ -119,7 +115,6 @@ function handleResetDhigista() {
         return;
     }
 
-    // 1. Soo celi kaararka miiska ku-meel-gaarka ah
     for (const set of myOpenedSets) {
         for (const card of set) {
             myHand.push({
@@ -130,11 +125,9 @@ function handleResetDhigista() {
         }
     }
 
-    // 2. Nadiifi xogta ku-meel-gaarka ah
     myOpenedSets = [];
     temporaryScore = 0;
 
-    // 3. Dib u sawir gacanta iyo miiska
     renderMyHand();
     renderMyTableSets();
 
@@ -144,9 +137,52 @@ function handleResetDhigista() {
     alert("Kaararkii waa lagu soo celiyay gacantaada.");
 }
 
+function calculateTemporaryScore() {
+    const selectedCards = myHand.filter(c => c.selected);
+    const scoreDisplay = document.getElementById("temp-score-display");
 
-/* ================= ACTIONS ================= */
+    if (selectedCards.length === 0) {
+        if (scoreDisplay) scoreDisplay.textContent = "0";
+        return 0;
+    }
 
+    let score = 0;
+    for (const c of selectedCards) {
+        // 🔥 Waa muhiim si loo garto 'j', 'q', 'k', 'a'
+        const val = String(c.value).toLowerCase();
+        score += pointValues[val] || 0;
+    }
+
+    if (scoreDisplay) scoreDisplay.textContent = score;
+    return score;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Badhanka Dhigo
+    const dhigoBtn = document.getElementById("dhigoBtn");
+    if (dhigoBtn) dhigoBtn.onclick = handleDhigista;
+
+    // 2. Badhanka Ka noqo (Reset)
+    const resetBtn = document.getElementById("resetBtn");
+    if (resetBtn) resetBtn.onclick = handleResetDhigista;
+
+    // 3. Badhanka Sort
+    const sortBtn = document.getElementById("sortBtn");
+    if (sortBtn) sortBtn.onclick = handleSort;
+
+    // 4. Badhanka Tuur
+    const tuurBtn = document.getElementById("tuurBtn");
+    if (tuurBtn) tuurBtn.onclick = handleTuurista;
+});
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === 'visible') {
+        console.log("Sync cusub ayaa la codsaday...");
+        socket.emit("request_sync"); // Server-ka ha u soo diro xogta cusub
+    }
+});
+
+/* ACTIONS */
 function handleDhigista() {
     if (!isMyTurn) return alert("Sug doorkaaga!");
 
@@ -155,40 +191,32 @@ function handleDhigista() {
         return alert("Koox kasta waa inay ugu yaraan 3 kaar noqotaa!");
     }
 
-    // 1. Hubi haddii kooxda ay sax tahay (Serial ama Set)
     if (!isSerial(selectedCards) && !isSet(selectedCards)) {
         return alert("Kaararka aad dooratay ma ahan koox sax ah (Set ama Serial).");
     }
 
-    // 2. Xisaabi dhibcaha (Hubi in xarfaha loo beddelay lowercase)
     let currentSetScore = selectedCards.reduce((sum, c) => {
         const val = String(c.value).toLowerCase();
         return sum + (pointValues[val] || 0);
     }, 0);
 
     if (!isOpened) {
-        // --- WEJIGA FURITAANKA (URAARIN ILAA 101) ---
         temporaryScore += currentSetScore;
         myOpenedSets.push([...selectedCards]);
 
-        // Ka saar gacanta oo dib u sawir
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
         renderMyTableSets();
 
-        // 3. Xeerka 101 iyo kooxda 4-ta ah
         if (temporaryScore >= 101) {
             const hasFourCardGroup = myOpenedSets.some(set => set.length >= 4);
 
             if (!hasFourCardGroup) {
-                // Haddii uusan haysan 4-xabo, waa inuu sii wadaa
                 alert("101 waad gaartay, laakiin waa inaad haysataa ugu yaraan hal koox oo 4+ kaar ah!");
             } else {
-                // Hadda ayuu dhab ahaan u degay
                 isOpened = true;
                 iHaveOpened = true;
 
-                // U dir server-ka (Fiiro gaar ah: Server-kaaga wuxuu rabaa 'cards')
                 socket.emit("playerOpens", {
                     cards: selectedCards, 
                     allSets: myOpenedSets,
@@ -202,7 +230,6 @@ function handleDhigista() {
         }
 
     } else {
-        // --- HADDII UU HORE U DEGGAY (ADD TO TABLE) ---
         socket.emit("addToTable", { cards: selectedCards });
 
         myOpenedSets.push([...selectedCards]);
@@ -213,7 +240,6 @@ function handleDhigista() {
     }
 }
 
-/* 4. MUHIIM: Ku dar xiriirka badhamada dhamaadka script.js */
 document.addEventListener("DOMContentLoaded", () => {
     const dhigoBtn = document.getElementById("dhigoBtn");
     if (dhigoBtn) {
@@ -226,19 +252,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// 🔥 FUNCTION-KA KALA QAYBIYA KAARARKA (ALGORITHM)
+/* FUNCTION-KA KALA QAYBIYA KAARARKA (ALGORITHM) */
 function autoSplitIntoGroups(cards) {
     let groups = [];
     let remaining = [...cards];
-
-    // Marka hore u kala saar midabada (Suits)
     let suits = ['♠', '♥', '♣', '♦'];
     
-    // 1. Raadi Serials (isku midab ah oo is xiga)
     suits.forEach(suit => {
         let suitCards = remaining.filter(c => c.suit === suit);
         if (suitCards.length >= 3) {
-            // Halkan waxaa u baahan tahay isSerial-kaaga oo yar oo la habeeyay
             if (isSerial(suitCards)) {
                 groups.push(suitCards);
                 remaining = remaining.filter(c => c.suit !== suit);
@@ -246,7 +268,6 @@ function autoSplitIntoGroups(cards) {
         }
     });
 
-    // 2. Raadi Sets (isku qiimo ah oo midab duwan)
     let values = [...new Set(remaining.map(c => c.value))];
     values.forEach(val => {
         let valCards = remaining.filter(c => c.value === val);
@@ -259,14 +280,12 @@ function autoSplitIntoGroups(cards) {
     return groups;
 }
 
-
 function handleSort() {
     const sortOrder = { 
         '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
         'j': 11, 'q': 12, 'k': 13, 'a': 14 
     };
 
-    // Suit-ka dhibco ayaan u siinaynaa si ay u kala dambeeyaan (s, h, d, c)
     const suitOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
 
     myHand.sort((a, b) => {
@@ -276,23 +295,19 @@ function handleSort() {
         const rankA = sortOrder[valA] || 0;
         const rankB = sortOrder[valB] || 0;
 
-        // --- DOOKHA 1AAD: Haddii aad rabto in (Ac, Kc, Qc) ay isku xigaan ---
-        // Marka hore isku keen Suits-ka (Calaamadda)
         if (a.suit !== b.suit) {
             return suitOrder[b.suit] - suitOrder[a.suit];
         }
         
-        // Marka xigta, u kala saar nambar ahaan (Rank)
-        return rankB - rankA; // 'rankB - rankA' waxay ka dhigaysaa inuu A-ga ugu horreeyo
+        return rankB - rankA; 
     });
 
     myHand.forEach(c => c.selected = false);
     renderMyHand();
 }
 
-
 function handleDragOver(e) {
-    e.preventDefault(); // Waa muhiim si drop u shaqeeyo
+    e.preventDefault(); 
 }
 
 function handleDrop(e) {
@@ -302,14 +317,12 @@ function handleDrop(e) {
     const dragEndIndex = +dropCard.dataset.index;
 
     if (dragStartIndex !== dragEndIndex) {
-        // Ka saar kaarka meeshuu joogay
         const [movedCard] = myHand.splice(dragStartIndex, 1);
-        // Ku dhex rid booska cusub ee la keenay
         myHand.splice(dragEndIndex, 0, movedCard);
     }
 
     dragStartIndex = null;
-    renderMyHand(); // Dib u sawir gacanta oo habaysan
+    renderMyHand();
 }
 
 function renderSets(elementId, sets) {
@@ -359,12 +372,9 @@ socket.on("updateTableUI", (data) => {
 
             const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
             const suitLetter = suitMap[card.suit] || 's';
-            
-            // 🔥 ISBEDDELKA: .toLowerCase() ku dar halkan
             const val = String(card.value).toLowerCase();
             const fileName = `${val}${suitLetter}.svg`;
 
-            // Sawirka SVG-ga
             cardDiv.innerHTML = `<img src="/cards/${fileName}" style="width: 100%; height: 100%; border-radius: 2px;">`;
             setDiv.appendChild(cardDiv);
         });
@@ -376,9 +386,7 @@ socket.on("updateTableUI", (data) => {
     if (req) req.innerText = nextRequiredPoints;
 });
 
-
-/* ================= HELPER FUNCTIONS ================= */
-
+/* HELPER FUNCTIONS */
 function isSet(cards) {
     if (cards.length < 3) return false;
 
@@ -417,38 +425,26 @@ function isSerial(cards) {
     return true;
 }
 
-// Raadi function-ka bilaaba ciyaarta
 function startTheGame() {
     const name = document.getElementById("nameInput").value;
     
     if (name) {
-        // 1. Qari setup-ka
         document.getElementById("setup-screen").style.display = "none";
-        
-        // 2. Soo saar miiska iyo header-ka
         document.getElementById("main-header").style.display = "flex";
         document.getElementById("game-table").style.display = "block";
-        
-        // 3. 🔥 SOO SAAR GACANTA IYO BADHAMADA (Hadda ayay soo muuqanayaan)
-        // Maadaama CSS-ka uu yahay Class (.), isticmaal querySelector
         document.querySelector(".player-hand-section").style.display = "flex";
-        
-        // 4. U sheeg server-ka
         socket.emit('joinRandom', name);
     }
 }
 
 function handleTuurista() {
-    if (!isMyTurn) return; // Iska daa alert-ka badan
+    if (!isMyTurn) return;
 
-    // 1. Hubi inuu kaar qaatay
     if (myHand.length === 14) {
         alert("Fadlan marka hore kaar qaado!");
         return;
     }
 
-    // 2. XEERKA 101 (Kani waa kan mobilka ka xiraya):
-    // Haddii uu tuurista qaatay, waa inuu degay (isOpened)
     if (pickedFromDiscard && !isOpened) {
         const canOpenNow = calculateTemporaryScore() >= 101;
         if (!canOpenNow) {
@@ -466,7 +462,6 @@ function handleTuurista() {
         return;
     }
 
-    // 3. XEERKA BATUUTADA
     const remaining = myHand.length - 1;
     if (remaining === 1 || remaining === 2) {
         alert("Xeerka Batuutada: Ma kuu hari karaan 1 ama 2 xabo oo kaliya!");
@@ -476,7 +471,6 @@ function handleTuurista() {
     const cardToPlay = myHand[selectedIndex];
     socket.emit("playCard", cardToPlay);
 
-    // Nadiifi UI
     myHand.splice(selectedIndex, 1);
     isMyTurn = false;
     hasDrawn = false;
@@ -485,16 +479,13 @@ function handleTuurista() {
     if (timerInterval) clearInterval(timerInterval);
 }
 
-/* ================= KEEP ALIVE (MOBILKA) ================= */
-// Koodhkan wuxuu soconayaa 10-kii ilbiriqsiba mar isagoo madax-bannaan
+/* KEEP ALIVE (MOBILKA) */
 setInterval(() => {
     if (socket && socket.connected) {
         socket.emit("ping_keep_alive"); 
-        console.log("Ping loo diray server-ka..."); // Tani waa tijaabo kaliya
     }
 }, 10000); 
 
-// 1. Function u gaar ah qashinka iyo muujinta miiska
 function switchUItoGame() {
     const setupScreen = document.getElementById("setup-screen");
     const waitingRoom = document.getElementById("waiting-room");
@@ -509,145 +500,72 @@ function switchUItoGame() {
     if (myHandSection) myHandSection.style.display = "flex";
 }
 
-// 2. Marka ciyaartu bilaabato (caadi)
 socket.on("matchFound", (data) => {
     setTimeout(switchUItoGame, 1500); 
 });
 
-// 3. Marka aad dib u soo laabato (Reconnect Fix)
 socket.on("startHand", (hand) => {
     myHand = hand.map(c => ({...c, selected:false}));
-    
-    // 🔥 MUHIIM: Haddii qolka sugitaanka uu weli muuqdo, qari oo tusi ciyaarta
     if (document.getElementById("waiting-room").style.display !== "none") {
         switchUItoGame();
     }
-    
     renderMyHand();
 });
 
 document.getElementById("startGameBtn").onclick = () => {
     const nameInput = document.getElementById("nameInput");
     const name = nameInput.value.trim();
-    
     if (!name) return alert("Fadlan magacaaga qor!");
 
-    // 🔥 KANI WAA ISBEDELKA: Browser-ka ha xasuusto magacaaga
     localStorage.setItem("turub_user_name", name);
-
     document.getElementById("setup-screen").style.display = "none";
     document.getElementById("waiting-room").style.display = "block";
     socket.emit("joinRandom", name);
 };
 
-/* ================= AUTO-LOAD NAME (RECONNECT FIX) ================= */
-// Marka boggu soo laabto (Refresh), magaca iskiis ha u soo qoro
+/* AUTO-LOAD NAME (RECONNECT FIX) */
 window.addEventListener("load", () => {
     const savedName = localStorage.getItem("turub_user_name");
     const nameInput = document.getElementById("nameInput");
-    
     if (savedName && nameInput) {
         nameInput.value = savedName;
-        console.log("Magacaagii hore waa la soo celiyay: " + savedName);
     }
 });
 
-
-
-
-/* ================= EVENT LISTENERS ================= */
-
-document.getElementById("startGameBtn").onclick = () => {
-    const nameInput = document.getElementById("nameInput");
-    const name = nameInput.value.trim();
-    
-    if (!name) return alert("Fadlan magacaaga qor!");
-
-    // 1. Qari halkii magaca laga qorayay
-    document.getElementById("setup-screen").style.display = "none";
-    
-    // 2. Muuji qolka sugitaanka ee cusub
-    document.getElementById("waiting-room").style.display = "block";
-
-    // 3. U dir server-ka magaca
-    socket.emit("joinRandom", name);
-};
-
-// --- KU DAR KANI (Waa muhiim si magacyada loo arko) ---
+/* EVENT LISTENERS */
 socket.on("waitingRoomUpdate", (data) => {
-    console.log("XOGTA SUGITAANKA:", data); 
-
     const statusText = document.getElementById("waiting-status");
     const listArea = document.getElementById("players-list");
 
-    if (!data || !data.players) {
-        console.error("Xogtu waa ebar (No players data)");
-        return;
-    }
+    if (!data || !data.players) return;
 
     const count = data.players.length;
     const dhiman = 4 - count;
 
-    console.log("Ciyaartoyda hadda:", count, "| Dhiman:", dhiman);
-
-    // 🔹 Sawir magacyada ciyaartoyda
     if (listArea) {
         listArea.innerHTML = "";
-
         data.players.forEach(p => {
             const pDiv = document.createElement("div");
-            pDiv.style.cssText = `
-                padding:8px;
-                margin:5px;
-                background:rgba(255,255,255,0.1);
-                border-radius:5px;
-                width:100%;
-                text-align:center;
-            `;
+            pDiv.style.cssText = `padding:8px; margin:5px; background:rgba(255,255,255,0.1); border-radius:5px; width:100%; text-align:center;`;
             pDiv.innerHTML = `✅ <b>${p.name}</b> waa diyaar`;
             listArea.appendChild(pDiv);
         });
     }
 
-    // 🔹 Fariinta hoose (status)
     if (statusText) {
         statusText.style.display = "block";
-
         if (dhiman > 0) {
-            // Magacyada Somali
-            const magacyo = {
-                1: "hal ciyaartooy",
-                2: "laba ciyaartooy",
-                3: "saddex ciyaartooy"
-            };
-
+            const magacyo = { 1: "hal ciyaartooy", 2: "laba ciyaartooy", 3: "saddex ciyaartooy" };
             const text = magacyo[dhiman] || `${dhiman} ciyaartooy`;
-
             statusText.innerText = `Waxaa dhiman ${text}: ${count}/4`;
-
-            // Midabyo
-            if (dhiman === 3) statusText.style.color = "#f1c40f";
-            else if (dhiman === 2) statusText.style.color = "#e67e22";
-            else if (dhiman === 1) statusText.style.color = "#e74c3c";
-
         } else {
             statusText.innerText = "Dhammaan waa la helay! Ciyaartu waa bilaabanaysaa...";
-            statusText.style.color = "#2ecc71";
         }
-
-        // ✨ animation yar (smooth)
-        statusText.style.opacity = "0";
-        setTimeout(() => {
-            statusText.style.transition = "opacity 0.3s ease";
-            statusText.style.opacity = "1";
-        }, 50);
     }
 });
 
-
 socket.on("playersUpdate", (data) => {
     const { players, stockCount, currentTurnId } = data;
-
     isMyTurn = (currentTurnId === socket.id);
 
     const statusEl = document.getElementById("turnText");
@@ -657,73 +575,35 @@ socket.on("playersUpdate", (data) => {
     }
 
     const stockEl = document.getElementById("stock-count");
-    if (stockEl && stockCount !== undefined) {
-        stockEl.textContent = stockCount;
-    }
+    if (stockEl && stockCount !== undefined) stockEl.textContent = stockCount;
 
     document.getElementById("dhigoBtn").disabled = !isMyTurn;
     document.getElementById("tuurBtn").disabled = !isMyTurn;
-    document.getElementById("sortBtn").disabled = false;
     document.getElementById("resetBtn").disabled = !isMyTurn;
 });
 
-
-
-/* ================= GAME START LISTENER ================= */
+/* GAME START LISTENER */
 socket.on("matchFound", (data) => {
-    console.log("Match Found! Sugaya fariinta u dambaysa...");
-
-    // 1. Ha qarin waiting-room isla markiiba.
-    // Waxaan siinaynaa 1.5 ilbiriqsi si uu qofku u arko "Ciyaartu way bilaabanaysaa..."
     setTimeout(() => {
-        const setupScreen = document.getElementById("setup-screen");
-        const waitingRoom = document.getElementById("waiting-room");
-        
-        if (setupScreen) setupScreen.style.display = "none";
-        if (waitingRoom) waitingRoom.style.display = "none";
-
-        // 2. Muuji HEADER-KA
-        const mainHeader = document.getElementById("main-header");
-        if (mainHeader) mainHeader.style.display = "flex";
-
-        // 3. Muuji Miiska Ciyaarta
-        const gameTable = document.getElementById("game-table");
-        if (gameTable) {
-            gameTable.style.display = "flex";
-            gameTable.style.visibility = "visible";
-        }
-
-        // 4. Muuji qaybta gacanta (Hand section)
-        const myHandSection = document.getElementById("my-hand-section");
-        if (myHandSection) myHandSection.style.display = "flex";
-
-        // 5. Sax magaca ciyaaryahanka
+        switchUItoGame();
         const nameInput = document.getElementById("nameInput");
         const displayName = document.getElementById("display-name");
         if (displayName && nameInput) displayName.textContent = nameInput.value;
-
-        console.log("Ciyaartu hadda ayay dhab ahaan u bilaabatay.");
         renderMyHand();
-    }, 1500); // 1500ms = 1.5 ilbiriqsi
-});
-
-
-socket.on("startHand", (hand) => {
-    myHand = hand.map(c => ({...c, selected:false}));
-    renderMyHand();
+    }, 1500);
 });
 
 socket.on("receiveCard", (card) => {
     myHand.push({ ...card, selected: false });
-    hasDrawn = true; // Tan ayaa ka joojinaysa inuu mar kale gujiyo stock-pile
+    hasDrawn = true;
     renderMyHand();
 });
 
-let timerInterval = null;   // 🔥 Waa in uu halkan yaal
+let timerInterval = null;
 socket.on("discardPickedSuccess", (card) => {
     myHand.push({ ...card, selected: false });
     hasDrawn = true;
-    pickedFromDiscard = true; // Qabo xogta inuu tuurista ka qaatay
+    pickedFromDiscard = true;
     renderMyHand();
 });
 
@@ -732,60 +612,36 @@ socket.on("yourTurn", (playerId) => {
     if (isMyTurn) hasDrawn = false; 
 
     const statusEl = document.getElementById("turnText");
-    const myHandArea = document.getElementById("my-hand");
     const qaadashadaEl = document.getElementById("stock-pile");
 
     clearInterval(timerInterval); 
 
     if (isMyTurn) {
-        // --- DOORKAAGA ---
         if (qaadashadaEl) {
             qaadashadaEl.style.pointerEvents = "auto";
             qaadashadaEl.style.opacity = "1";
             qaadashadaEl.style.border = "3px solid #f1c40f";
         }
-        
-        if (myHandArea) myHandArea.classList.remove("not-my-turn");
 
         let timeLeft = 30;
         timerInterval = setInterval(() => {
             timeLeft--;
             let msg = myHand.length >= 15 ? "TUUR XABBAD!" : "DOORKAAGA!";
-            let color = myHand.length >= 15 ? "#e74c3c" : "#2ecc71";
-            
-            if (statusEl) {
-                statusEl.innerHTML = `<b style="color:${color}">${msg} (${timeLeft}s)</b>`;
-            }
-
+            if (statusEl) statusEl.innerHTML = `<b>${msg} (${timeLeft}s)</b>`;
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
-                if (statusEl) statusEl.innerHTML = "<b style='color:red'>WAQTIGII WAA KA DHAMAADAY!</b>";
-
-                // --- KANI WAA XARIIQDA KELIYA EE LAGU DARAY ---
-                // Waxay server-ka ku amraysaa inuu doorka qasab ku wareejiyo
                 socket.emit("forceEndTurn"); 
             }
         }, 1500);
-
     } else {
-        // --- SUGITAANKA ---
         if (qaadashadaEl) {
             qaadashadaEl.style.pointerEvents = "none";
             qaadashadaEl.style.opacity = "0.6";
-            qaadashadaEl.style.border = "none";
         }
-
-        if (myHandArea) myHandArea.classList.add("not-my-turn");
-        
-        if (statusEl) {
-            statusEl.textContent = "Sugaya...";
-            statusEl.style.color = "#f1c40f";
-        }
+        if (statusEl) statusEl.textContent = "Sugaya...";
     }
-
     renderMyHand();
 });
-
 
 socket.on("updateDiscardPile", (card) => {
     const pile = document.getElementById("discard-pile");
@@ -794,19 +650,14 @@ socket.on("updateDiscardPile", (card) => {
 
     if (card) {
         const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
-        const suitLetter = suitMap[card.suit] || 's';
-        
-        // 🔥 HALKAN XITA: Ka dhig xaraf yar
         const val = String(card.value).toLowerCase();
-        const fileName = `${val}${suitLetter}.svg`;
-
+        const fileName = `${val}${suitMap[card.suit] || 's'}.svg`;
         const cardDiv = document.createElement("div");
         cardDiv.className = "card";
         cardDiv.innerHTML = `<img src="/cards/${fileName}" style="width: 100%; height: 100%; border-radius: 5px;">`;
         pile.appendChild(cardDiv);
     }
 });
-
 
 socket.on("updateOpponents", (data) => {
     const topEl = document.getElementById("top-name");
@@ -818,90 +669,32 @@ socket.on("updateOpponents", (data) => {
     if (rightEl) rightEl.innerText = data.right ? data.right.name : "";
 });
 
-
-socket.on("updateOnlineCount", (count) => {
-    const onlineCountElement = document.getElementById("online-count-number");
-    if (onlineCountElement) {
-        onlineCountElement.innerText = count;
-    }
-});
-
-// QAADASHADA BADDA (Stock Pile)
 const stockPile = document.getElementById("stock-pile");
 if (stockPile) {
     stockPile.onclick = () => {
-        if (!isMyTurn) return alert("Sug doorkaaga!");
-        if (hasDrawn) return alert("Hore ayaad xabad u qaadatay!");
-        
+        if (!isMyTurn || hasDrawn) return;
         socket.emit("drawCard");
         hasDrawn = true;
-        pickedFromDiscard = false; // Maadaama uu badda ka qaatay, qasab maaha inuu dego
+        pickedFromDiscard = false;
     };
 }
 
-// QAADASHADA TUURISTA (Discard Pile)
 const discardPile = document.getElementById("discard-pile");
 if (discardPile) {
     discardPile.onclick = () => {
-        if (!isMyTurn) return alert("Sug doorkaaga!");
-        if (hasDrawn) return alert("Hore ayaad xabad u soo qaadatay!");
-
+        if (!isMyTurn || hasDrawn) return;
         socket.emit("pickDiscard");
         hasDrawn = true;
-        pickedFromDiscard = true; // Xusuuso inuu tuurista qaatay (Waa inuu degaa!)
+        pickedFromDiscard = true;
     };
 }
 
 const tuurBtn = document.getElementById("tuurBtn");
 if (tuurBtn) {
-    tuurBtn.onclick = () => {
-        if (!isMyTurn) return alert("Maahan doorkaaga!");
-        if (!hasDrawn) return alert("Fadlan marka hore xabad soo qaado!");
-
-        // XEERKA 101: Haddii uu tuurista qaatay, waa inuu horay u degay ama hadda degaa
-        if (pickedFromDiscard && !isOpened) {
-            return alert("Maadaama aad tuurista qaadatay, waa inaad degtaa (101) ka hor intaadan kaar tuurin!");
-        }
-
-        const selectedIndex = myHand.findIndex(c => c.selected);
-        if (selectedIndex === -1) return alert("Dooro xabadda aad tuurayso!");
-
-        // XEERKA BATUUTADA (Haraagu waa inuu noqdaa 0 ama 3+)
-        // myHand.length - 1 waa inta u haraysa marka uu midkaas tuuro
-        const remaining = myHand.length - 1;
-        if (remaining === 1 || remaining === 2) {
-            return alert("Xeerka Batuutada: Ma kuu hari karaan 1 ama 2 xabo oo kaliya! (Waa in ay 0 noqoto ama 3 iyo ka badan)");
-        }
-
-        const cardToPlay = myHand[selectedIndex];
-        socket.emit("playCard", cardToPlay);
-
-        // Nadiifi UI-ga iyo State-ka
-        myHand.splice(selectedIndex, 1);
-        isMyTurn = false;
-        hasDrawn = false;
-        pickedFromDiscard = false;
-        renderMyHand();
-        
-        if (typeof timerInterval !== 'undefined') clearInterval(timerInterval);
-    };
+    tuurBtn.onclick = handleTuurista;
 }
-
-/* ================= SOCKET SETUP ================= */
-
-// Halkan dhig koodhka debug-ga ah:
-socket.on("connect", () => {
-    console.log("Socket-ku waa xiranyahay! ID-gaagu waa: " + socket.id);
-});
-
-socket.onAny((eventName, ...args) => {
-    console.log(`DHACDO CUSUB (Event): ${eventName}`, args);
-});
-
-/* ================= STATE & GLOBAL VARIABLES ================= */
-// ... koodhkii kale ee hoos ku qornaa ...
 
 socket.on("gameOver", ({ winnerName }) => {
     alert("Ciyaarta waxaa ku guuleystay: " + winnerName);
-    location.reload(); // Kani wuxuu dib u bilaabayaa bogga
+    location.reload();
 });
