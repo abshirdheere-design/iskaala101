@@ -276,11 +276,22 @@ io.on("connection", (socket) => {
     });
 
     /* 3. ACTIONS (DRAW/PICK/PLAY) */
-    socket.on("drawCard", () => {
+ socket.on("drawCard", () => {
         const room = rooms[socket.roomId];
         if (!room || !room.gameStarted) return;
         const p = room.players[room.activePlayerIndex];
-        if (p.id !== socket.id || p.hasActioned || p.hand.length >= 15) return;
+
+        // 1. Hubi inuu qofka turn-kiisa yahay
+        if (p.id !== socket.id) return;
+
+        // 2. Haddii uu qofku 15 kaar haysto, u sheeg inuu wax dhigo ama tuuro
+        if (p.hand.length >= 15) {
+            socket.emit("message", "Gacantaada waa buuxdaa (15). Fadlan dhig ama tuur kaar.");
+            return; 
+        }
+
+        // 3. Haddii uu horey wax u soo qaaday (hasActioned)
+        if (p.hasActioned) return;
 
         if (room.stockPile.length === 0) {
             const top = room.discardPile.pop();
@@ -291,11 +302,11 @@ io.on("connection", (socket) => {
 
         const card = room.stockPile.pop();
         p.hand.push(card);
-        p.hasActioned = true;
+        p.hasActioned = true; // Hadda wuxuu u gudbi karaa inuu "Tuuro" kaar
         socket.emit("receiveCard", card);
         updateRoomPlayers(socket.roomId);
     });
-
+	
     socket.on("playCard", (card) => {
         const room = rooms[socket.roomId];
         if (!room || !room.gameStarted) return;

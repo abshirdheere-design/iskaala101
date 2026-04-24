@@ -137,6 +137,26 @@ function handleResetDhigista() {
     alert("Kaararkii waa lagu soo celiyay gacantaada.");
 }
 
+function processGroups(selectedCards) {
+    // 1. Kala saar kaararka (Sort)
+    // 2. Isku day inaad ka dhex dhaliso kooxaha (Groups)
+    let groups = [];
+    let currentGroup = [selectedCards[0]];
+
+    for (let i = 1; i < selectedCards.length; i++) {
+        // Haddii kaarka hadda iyo kii ka horreeyay ay isku xigaan (Serial)
+        // ama ay isku nambar yihiin (Set), isku dhex hay.
+        if (isCompatible(selectedCards[i], selectedCards[i-1])) {
+            currentGroup.push(selectedCards[i]);
+        } else {
+            groups.push(currentGroup);
+            currentGroup = [selectedCards[i]];
+        }
+    }
+    groups.push(currentGroup);
+    return groups;
+}
+
 function calculateTemporaryScore() {
     const selectedCards = myHand.filter(c => c.selected);
     const scoreDisplay = document.getElementById("temp-score-display");
