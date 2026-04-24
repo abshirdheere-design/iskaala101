@@ -1007,10 +1007,11 @@ body {
 
 /* Meesha ay kooxuhu fariistaan miiska dhexdiisa */
 .melted-group {
-    display: flex; /* Tani waxay ka dhigaysaa inay is-garab fariistaan */
-    flex-direction: row; /* Bidix ilaa Midig */
-    gap: -20px; /* Haddii aad rabto inay wax yar is-sii saarnaadaan laakiin la arko */
-    margin: 5px;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap;
+    gap: 5px; /* Masaafada u dhexaysa kaararka */
+    padding: 10px;
 }
 
 .melted-card {
