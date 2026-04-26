@@ -65,20 +65,25 @@ function renderMyHand() {
 
 function renderMeltedGroups(groups) {
     const tableArea = document.getElementById('table-area');
-    // Nadiifi meesha hore
+    if (!tableArea) return;
     tableArea.innerHTML = ''; 
 
     groups.forEach(group => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'melted-group';
         
-        group.forEach(card => {
-            const cardImg = document.createElement('img');
-            cardImg.src = `/cards/${card.suit}_${card.value}.png`;
-            cardImg.className = 'melted-card';
-            groupDiv.appendChild(cardImg);
+        group.forEach((card, index) => {
+            const img = document.createElement('img');
+            const suitMap = { '♠': 's', '♥': 'h', '♦': 'd', '♣': 'c' };
+            const val = String(card.value).toLowerCase();
+            const fileName = `${val}${suitMap[card.suit] || 's'}.svg`; // .svg halkii ay ka ahayd .png
+
+            img.src = `/cards/${fileName}`;
+            img.className = 'melted-card';
+            if (index > 0) img.style.marginLeft = "-25px"; 
+            
+            groupDiv.appendChild(img);
         });
-        
         tableArea.appendChild(groupDiv);
     });
 }
@@ -215,13 +220,25 @@ document.addEventListener("visibilitychange", () => {
 });
 
 /* ACTIONS */
+/* --- DHIGISTA 101 LOGIC --- */
+
+// 2. Marka labaad: Function-ka xaqiijinta (Validation)
+function findValidGroups(cards) {
+    let tempCards = [...cards];
+    let groups = autoSplitIntoGroups(tempCards);
+    let usedCards = [];
+    groups.forEach(g => usedCards.push(...g));
+    let remaining = tempCards.filter(c => !usedCards.some(u => u.value === c.value && u.suit === c.suit));
+    return { validGroups: groups, remaining: remaining };
+}
+
+// 3. Marka saddexaad: Function-ka Badhanka (The Main Action)
 function handleDhigista() {
     if (!isMyTurn) return alert("Sug doorkaaga!");
 
     let selectedCards = myHand.filter(c => c.selected);
     if (selectedCards.length < 3) return alert("Dooro ugu yaraan 3 kaar!");
 
-    // Isticmaal Algorithm-ka cusub
     const { validGroups, remaining } = findValidGroups(selectedCards);
 
     if (remaining.length > 0) {
@@ -232,8 +249,7 @@ function handleDhigista() {
 
     if (!isOpened) {
         temporaryScore += totalScoreOfMove;
-        myOpenedSets.push(...validGroups); // Ku dar kooxaha la kala saaray
-
+        myOpenedSets.push(...validGroups);
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();
         renderMyTableSets();
@@ -252,7 +268,6 @@ function handleDhigista() {
             alert(`Wadarta: ${temporaryScore}. Sii wad ilaa 101!`);
         }
     } else {
-        // Haddii uu hore u degay
         socket.emit("addToTable", { groups: validGroups });
         myOpenedSets.push(...validGroups);
         myHand = myHand.filter(c => !c.selected);
