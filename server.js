@@ -334,7 +334,7 @@ function handleTurnTimeout(roomId) {
     if (!room) return;
     const p = room.players[room.activePlayerIndex];
 
-    // 1. Haddii uu 14 haysto, sii kaar (waa inuu 15 noqdaa hadda)
+    // 1. AUTO-DRAW
     if (p.hand.length === 14) {
         if (room.stockPile.length > 0) {
             const drawnCard = room.stockPile.pop();
@@ -343,24 +343,33 @@ function handleTurnTimeout(roomId) {
         }
     }
 
-    // 2. KA HOR INTAAN LOO GUDBIN QOFKA XIGA (Force Discard)
-    // Halkan ayaa ah meesha ay cilladdu kaa haysato
+    // 2. AUTO-DISCARD
     if (p.hand.length >= 15) {
-        // Ka saar kaarka ugu dambeeya gacanta
-        const cardToDiscard = p.hand.pop(); 
+        const cardToDiscard = p.hand[p.hand.length - 1];
+
+        // Ka saar gacanta (si copy uusan u dhicin)
+        p.hand = p.hand.filter(c => c.id !== cardToDiscard.id);
+
+        // Ku dar miiska
         room.discardPile.push(cardToDiscard);
 
-        // U sheeg John in gacantiisii ay hadda tahay 14!
-        io.to(p.id).emit("updateHand", p.hand); 
+        // U dir qofka ciyaaraya
+        io.to(p.id).emit("updateHand", p.hand);
 
-        // U sheeg miiska oo dhan in kaar la tuuray
+        // U dir dhammaan ciyaartoyda
         io.to(roomId).emit("updateDiscardPile", cardToDiscard);
+        io.to(roomId).emit("updateTableUI", {
+            players: room.players,
+            discardPile: room.discardPile,
+            stockCount: room.stockPile.length
+        });
     }
 
-    // 3. Hadda ka dib u gudbi qofka xiga
+    // 3. Gudbi ciyaarta
     p.hasActioned = false;
     moveToNextPlayer(roomId);
 }
+
 
 	
     socket.on("playCard", (card) => {
