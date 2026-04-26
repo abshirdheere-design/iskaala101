@@ -425,21 +425,31 @@ body {
 }
 
 /* ================= CARD STYLING ================= */
+/* HALKAN KU BEDDEL DHAMMAAN .card-KII HORE */
 .card {
-    width: 75px; 
-    height: 110px;
-    background: white; /* Ka dhig caddaan saafi ah si SVG-gu uga muuqdo */
+    position: relative;
+    width: 75px;        /* Baaxadda */
+    height: 110px;      /* Dhererka */
+    background: white; 
     border-radius: 8px;
-    margin-left: -20px;
-    display: flex; 
+    border: 1px solid #ddd;
+    
+    display: flex;
     justify-content: center;
     align-items: center;
+    
+    /* Ha isticmaalin padding halkan si sawirku u weynaado */
+    padding: 0; 
+    
+    /* Margin-ka bidix halkan ha ku darin haddii aad JS ku darayso */
+    margin-left: 5px; 
+    
     box-shadow: -3px 0 8px rgba(0,0,0,0.4);
     transition: all 0.2s ease;
     cursor: pointer;
-    border: 1px solid #ddd;
-    position: relative;
+    touch-action: none;
     overflow: hidden; /* Muhiim: si sawirku uusan geesaha uga bixin */
+    z-index: 5;
 }
 
 /* Kani waa class-ka u oggolaanaya sawirka inuu buuxiyo kaarka */
