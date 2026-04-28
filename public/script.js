@@ -248,27 +248,36 @@ function handleDhigista() {
     let totalScoreOfMove = selectedCards.reduce((sum, c) => sum + (pointValues[String(c.value).toLowerCase()] || 0), 0);
 
     if (!isOpened) {
-        temporaryScore += totalScoreOfMove;
-        myOpenedSets.push(...validGroups);
-        myHand = myHand.filter(c => !c.selected);
-        renderMyHand();
-        renderMyTableSets();
+        // Hubi 101
+        let currentTotal = temporaryScore + totalScoreOfMove;
+        let allSetsSoFar = [...myOpenedSets, ...validGroups];
+        const hasFourPlus = allSetsSoFar.some(g => g.length >= 4);
 
-        if (temporaryScore >= 101) {
-            const hasFourPlus = myOpenedSets.some(g => g.length >= 4);
-            if (!hasFourPlus) {
-                alert("Wadartaadu waa " + temporaryScore + ", laakiin waa inaad haysataa ugu yaraan hal koox oo 4+ kaar ah!");
-            } else {
-                isOpened = true;
-                iHaveOpened = true;
-                socket.emit("playerOpens", { allSets: myOpenedSets, totalScore: temporaryScore });
-                alert("Waad degtay! Dhibcahaaga: " + temporaryScore);
-            }
+        if (currentTotal >= 101 && hasFourPlus) {
+            // Halkan ayaan u diraynaa Server-ka
+            socket.emit("meldSets", allSetsSoFar); 
+            
+            isOpened = true;
+            iHaveOpened = true;
+            myOpenedSets = allSetsSoFar;
+            myHand = myHand.filter(c => !c.selected);
+            temporaryScore = 0; // Dib u bilaaw maadaama aad degtay
+            
+            renderMyHand();
+            renderMyTableSets();
+            alert("Waad degtay! Dhibcahaaga: " + currentTotal);
         } else {
-            alert(`Wadarta: ${temporaryScore}. Sii wad ilaa 101!`);
+            // Halkan waxaad ku ururinaysaa kaararka miiska saaran laakiin aan weli 101 gaarin
+            temporaryScore += totalScoreOfMove;
+            myOpenedSets.push(...validGroups);
+            myHand = myHand.filter(c => !c.selected);
+            renderMyHand();
+            renderMyTableSets();
+            alert(`Wadarta: ${temporaryScore}. Sii wad ilaa 101 ama hal koox oo 4 ah!`);
         }
     } else {
-        socket.emit("addToTable", { groups: validGroups });
+        // Haddii aad hore u furnayd, kaliya ku dar kuwa cusub
+        socket.emit("meldSets", validGroups); 
         myOpenedSets.push(...validGroups);
         myHand = myHand.filter(c => !c.selected);
         renderMyHand();

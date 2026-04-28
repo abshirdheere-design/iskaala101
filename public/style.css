@@ -40,7 +40,7 @@ body {
     display: none; /* 🔥 BILOWGA MA MUUQANAYO - Tani waa xalka sawirkaaga */
     flex-direction: column;
     align-items: center;
-    z-index: 9999 !important;
+    z-index: 10000 !important;
     pointer-events: none;
 }
 
@@ -219,7 +219,7 @@ body {
         inset 0 0 50px rgba(0,0,0,0.6),  /* gudaha */
         0 10px 30px rgba(0,0,0,0.5);     /* dibadda */
 
-    z-index: 0;
+    z-index: -1;
 }
 
 .welcome-container {
@@ -253,7 +253,7 @@ body {
     height: 50vh;
 
     transform: translate(-50%, -50%);
-    z-index: 10;
+    z-index: 20;
 
     background: transparent;
     pointer-events: auto; /* 🔥 muhiim: allow interaction */
@@ -384,7 +384,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    z-index: 20;
+    z-index: 50;
 }
 
 #player-top { 

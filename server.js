@@ -173,15 +173,12 @@ io.on("connection", (socket) => {
                 socket.roomId = id;
                 socket.join(id);
                 
-                // A. Gacanta kaararka
                 socket.emit("startHand", existingPlayer.hand); 
 
-                // B. Kaarka qashinka (Discard Pile)
                 if (room.discardPile.length > 0) {
                     socket.emit("updateDiscardPile", room.discardPile.at(-1));
                 }
 
-                // C. Sync Table (Dhammaan dadka miiska wax u saaran yihiin)
                 room.players.forEach(p => {
                     if (p.isOpened && p.openedSets.length > 0) {
                         socket.emit("updateTableUI", {
@@ -192,7 +189,6 @@ io.on("connection", (socket) => {
                     }
                 });
 
-                // D. U sheeg xaaladda ciyaarta (Yaa leh doorka)
                 const currentPlayer = room.players[room.activePlayerIndex];
                 socket.emit("matchFound", { 
                     roomId: id, 
@@ -252,7 +248,6 @@ io.on("connection", (socket) => {
                 currentTurn: room.players[0].id 
             });
             
-            // Bilaaw Timer-ka Server-ka
             startTurnTimer(roomId);
             updateRoomPlayers(roomId);
         }
@@ -262,146 +257,108 @@ io.on("connection", (socket) => {
     socket.on("request_sync", () => {
         if (socket.roomId && rooms[socket.roomId]) {
             updateRoomPlayers(socket.roomId);
-            // Sidoo kale u soo celi discard pile-ka ugu dambeeyay
             const room = rooms[socket.roomId];
             if (room.discardPile.length > 0) {
                 socket.emit("updateDiscardPile", room.discardPile.at(-1));
             }
         }
     });
-	
+    
     socket.on("pauseTimerRequest", () => {
-    const room = rooms[socket.roomId];
-    if (room && room.timer) {
-        clearInterval(room.timer); // Saacadda halkan ku jooji
-        io.to(socket.roomId).emit("timerPaused", { message: "Saacadda waa la hakiyay (Dhisid socota...)" });
-      }
-    });
-	
-    /* 3. ACTIONS (DRAW/PICK/PLAY) */
- socket.on("drawCard", () => {
-    const room = rooms[socket.roomId];
-    if (!room || !room.gameStarted) return;
-    const p = room.players[room.activePlayerIndex];
-
-    if (p.id !== socket.id) return;
-
-    // Haddii uu 15 haysto, micnaheedu waa horey ayuu u soo qaatay
-    if (p.hand.length >= 15 || p.hasActioned) {
-        socket.emit("message", "Horey ayaad u qaadatay kaar. Fadlan tuur hal kaar.");
-        return; 
-    }
-
-    const card = room.stockPile.pop();
-    p.hand.push(card);
-    p.hasActioned = true; // Hadda wuxuu geli karaa inuu "Tuuro"
-    
-    socket.emit("receiveCard", card);
-    updateRoomPlayers(socket.roomId);
-});
-
-function dealCards(room) {
-    // 1. Isku dhex qas kaararka ka hor intaan la qaybin
-    room.deck = shuffle([...fullDeck]); 
-
-    room.players.forEach(player => {
-        // 2. Qof kasta sii 14 kaar (Xitaa kan u horreeya)
-        player.hand = room.deck.splice(0, 14); 
-        player.hasActioned = false; 
-    });
-
-    // 3. Kaarka u horreeya ee miiska yaal (Discard Pile)
-    room.discardPile = [room.deck.pop()];
-    
-    // 4. Inta hartayna waa rasada (Stock Pile)
-    room.stockPile = room.deck;
-
-    // 5. U sheeg dhammaan dadka in ciyaartu bilaabatay
-    io.to(room.id).emit("gameStarted", {
-        players: room.players.map(p => ({ id: p.id, name: p.name, handCount: 14 })),
-        discardPile: room.discardPile
-    });
-}
-
-// Function-ka maamula marka waqtigu ka dhamaado qofka (Turn Timeout)
-function handleTurnTimeout(roomId) {
-    const room = rooms[roomId];
-    if (!room) return;
-    const p = room.players[room.activePlayerIndex];
-
-    // 1. AUTO-DRAW
-    if (p.hand.length === 14) {
-        if (room.stockPile.length > 0) {
-            const drawnCard = room.stockPile.pop();
-            p.hand.push(drawnCard);
-            io.to(p.id).emit("receiveCard", drawnCard);
+        const room = rooms[socket.roomId];
+        if (room && room.timer) {
+            clearInterval(room.timer);
+            io.to(socket.roomId).emit("timerPaused", { message: "Saacadda waa la hakiyay..." });
         }
-    }
+    });
+    
+    /* 3. ACTIONS (DRAW/PICK/PLAY) */
+    socket.on("drawCard", () => {
+        const room = rooms[socket.roomId];
+        if (!room || !room.gameStarted) return;
+        const p = room.players[room.activePlayerIndex];
 
-    // 2. AUTO-DISCARD
-    if (p.hand.length >= 15) {
-        const cardToDiscard = p.hand[p.hand.length - 1];
+        if (p.id !== socket.id) return;
 
-        // Ka saar gacanta (si copy uusan u dhicin)
-        p.hand = p.hand.filter(c => c.id !== cardToDiscard.id);
+        if (p.hand.length >= 15 || p.hasActioned) {
+            socket.emit("message", "Horey ayaad u qaadatay kaar.");
+            return; 
+        }
 
-        // Ku dar miiska
-        room.discardPile.push(cardToDiscard);
+        const card = room.stockPile.pop();
+        p.hand.push(card);
+        p.hasActioned = true; 
+        
+        socket.emit("receiveCard", card);
+        updateRoomPlayers(socket.roomId);
+    });
 
-        // U dir qofka ciyaaraya
-        io.to(p.id).emit("updateHand", p.hand);
+    /* 🔥 4. MELD SETS (XALKA BRUNO) */
+    socket.on("meldSets", (sets) => {
+        const room = rooms[socket.roomId];
+        if (!room || !room.gameStarted) return;
 
-        // U dir dhammaan ciyaartoyda
-        io.to(roomId).emit("updateDiscardPile", cardToDiscard);
-        io.to(roomId).emit("updateTableUI", {
-            players: room.players,
-            discardPile: room.discardPile,
-            stockCount: room.stockPile.length
+        const p = room.players.find(player => player.id === socket.id);
+        if (!p) return;
+
+        // Hel ID-yada kaararka la dhigay
+        let cardsToRemoveIds = [];
+        sets.forEach(set => {
+            set.forEach(card => cardsToRemoveIds.push(card.id));
         });
-    }
 
-    // 3. Gudbi ciyaarta
-    p.hasActioned = false;
-    moveToNextPlayer(roomId);
-}
+        // KA SAAR GACANTA: Kani waa muhiim si uusan kaarku ugu soo laaban
+        p.hand = p.hand.filter(card => !cardsToRemoveIds.includes(card.id));
 
+        p.isOpened = true;
+        p.openedSets.push(...sets);
 
-	
-    socket.on("playCard", (card) => {
-    const room = rooms[socket.roomId];
-    if (!room || !room.gameStarted) return;
-    
-    const p = room.players[room.activePlayerIndex];
-    if (p.id !== socket.id) return;
-
-    // 1. Hubi in kaarka uu gacanta ugu jiro (Security Check)
-    const cardIndex = p.hand.findIndex(c => c.id === card.id);
-    if (cardIndex === -1) return; // Haddii uusan jirin, ha samayn waxba
-
-    // 2. KA SAAR GACANTA (Isticmaal Splice si uu u go'o)
-    p.hand.splice(cardIndex, 1);
-
-    // 3. KU DAR MIISKA
-    room.discardPile.push(card);
-    io.to(socket.roomId).emit("updateDiscardPile", card);
-    
-    p.hasActioned = false;
-    p.pickedFromDiscard = false;
-
-    // 4. HUBI GUUSHA
-    if (p.hand.length === 0) {
-        const results = room.players.map(pl => ({ name: pl.name, points: calculateHandPoints(pl.hand) }));
-        io.to(socket.roomId).emit("gameOver", { winnerName: p.name, allResults: results });
-        room.gameStarted = false;
-        if(room.turnTimeout) clearTimeout(room.turnTimeout);
-    } else {
-        // U dir qofka gacantiisa cusub si looga saaro kaarkii uu tuuray UI-ga
+        // U dir qofka gacantiisa cusub oo nadiif ah
         socket.emit("startHand", p.hand); 
-        nextTurn(socket.roomId);
-    }
-});
 
-    /* 4. DISCONNECT (SOFT) */
+        // U sheeg dadka kale in miiska wax lagu daray
+        io.to(socket.roomId).emit("updateTableUI", {
+            playerId: p.id,
+            allSets: p.openedSets
+        });
+        
+        updateRoomPlayers(socket.roomId);
+    });
+
+    socket.on("playCard", (card) => {
+        const room = rooms[socket.roomId];
+        if (!room || !room.gameStarted) return;
+        
+        const p = room.players[room.activePlayerIndex];
+        if (p.id !== socket.id) return;
+
+        const cardIndex = p.hand.findIndex(c => c.id === card.id);
+        if (cardIndex === -1) return;
+
+        p.hand.splice(cardIndex, 1);
+        room.discardPile.push(card);
+        io.to(socket.roomId).emit("updateDiscardPile", card);
+        
+        p.hasActioned = false;
+        p.pickedFromDiscard = false;
+
+        if (p.hand.length === 0) {
+            const results = room.players.map(pl => ({ name: pl.name, points: calculateHandPoints(pl.hand) }));
+            io.to(socket.roomId).emit("gameOver", { winnerName: p.name, allResults: results });
+            room.gameStarted = false;
+            if(room.turnTimeout) clearTimeout(room.turnTimeout);
+        } else {
+            socket.emit("startHand", p.hand); 
+            // Hubi in nextTurn function-ku kuu jiro, haddii kale wac moveToNextPlayer(socket.roomId)
+            if (typeof nextTurn === "function") {
+                nextTurn(socket.roomId);
+            } else {
+                moveToNextPlayer(socket.roomId);
+            }
+        }
+    });
+
+    /* 5. DISCONNECT */
     socket.on("disconnect", () => {
         onlineUsers--;
         const room = rooms[socket.roomId];
@@ -411,11 +368,10 @@ function handleTurnTimeout(roomId) {
                 if (!room.gameStarted) {
                     room.players = room.players.filter(p => p.id !== socket.id);
                 } else {
-                    player.online = false; // Mobile Sleep/Refresh
+                    player.online = false;
                 }
             }
             
-            // Haddii qolku cidlo noqdo, tirtir
             if (room.players.filter(p => p.online).length === 0) {
                 if(room.turnTimeout) clearTimeout(room.turnTimeout);
                 delete rooms[socket.roomId];
