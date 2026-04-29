@@ -906,27 +906,25 @@ body {
     #player-right { margin-left: 580px !important; }
 }
 
-/* Meesha ay kooxuhu fariistaan miiska dhexdiisa */
-
+/* Kaararka miiska saaran */
 .melted-card {
-    width: 35px !important; /* Cabbirka saxda ah ee miiska */
+    width: 40px; 
     height: auto;
-    border: 1px solid #777;
-    border-radius: 4px;
-    background: #ffffff !important; /* 👈 Kani wuxuu xallinayaa "Warqadda Cad" */
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.4);
-    display: block;
-    object-fit: contain;
+    margin-left: -25px; /* Overlap-ka jiifka ah */
 }
 
-/* Ka hortag in kooxuhu is-dhex galaan */
+.melted-card:first-child {
+    margin-left: 0;
+}
+
+/* Koox kasta (Group) dhexdeeda mar walba ha ahaato Horizontal (Jiif) */
 .melted-group {
-    padding: 5px;
-    margin: 5px;
-    display: flex;
+    display: flex !important;
+    flex-direction: row !important; /* Kooxda dhexdeeda (sida 7-7-7) waa inay jiiftaa */
+    margin-bottom: 8px; /* Masaafada u dhaxaysa kooxaha */
+    justify-content: flex-start;
 }
 
-.melted-card:first-child { margin-left: 0; }
 .melted-card:hover { transform: scale(1.2); z-index: 100; }
 .player-table-pos {
     position: absolute;
@@ -935,29 +933,20 @@ body {
 }
 
 /* 1. Kaararka qofka SANKA (Top) - Jiif ha u fariistaan */
-#pos-top { 
-    top: 0; left: 50%; 
-    transform: translateX(-50%); 
-    flex-direction: row; 
+/* BOOSASKA SARE IYO HOOSE */
+#pos-top, #pos-bottom {
+    display: flex;
+    flex-direction: row;    /* Kooxuhu ha is-garab fariistaan */
+    gap: 15px;              /* Masaafada u dhaxaysa kooxaha */
 }
 
-/* 2. Kaararka ADIGA (Bottom) - Jiif ha u fariistaan */
-#pos-bottom { 
-    bottom: 0; left: 50%; 
-    transform: translateX(-50%); 
-    flex-direction: row; 
+/* BOOSASKA DHINACYADA (Bidix iyo Midig) */
+#pos-left, #pos-right {
+    display: flex;
+    flex-direction: column; /* Kooxuhu ha iska hooseeyaan (Vertical stacks) */
+    align-items: center;    /* Ka dhig dhexda */
+    width: 100px;           /* Boos ku filan si ay kooxuhu u jiifaan */
 }
 
-/* 3. Kaararka BIDIXDA (Left) - Taagan ha u fariistaan (Vertical) */
-#pos-left { 
-    left: 0; top: 50%; 
-    transform: translateY(-50%); 
-    flex-direction: column; 
-}
-
-/* 4. Kaararka MIDIGTA (Right) - Taagan ha u fariistaan (Vertical) */
-#pos-right { 
-    right: 0; top: 50%; 
-    transform: translateY(-50%); 
-    flex-direction: column; 
-}
+#pos-left { left: 30px; }
+#pos-right { right: 30px; }

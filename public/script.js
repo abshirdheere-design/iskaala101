@@ -240,46 +240,59 @@ function handleDhigista() {
     if (selectedCards.length < 3) return alert("Dooro ugu yaraan 3 kaar!");
 
     const { validGroups, remaining } = findValidGroups(selectedCards);
+    if (remaining.length > 0) return alert("Kaarka " + remaining[0].value + " ma geli karo koox!");
 
-    if (remaining.length > 0) {
-        return alert("Kaarka " + remaining[0].value + remaining[0].suit + " kama mid noqon karo koox sax ah!");
-    }
-
+    // 1. Xisaabi dhibcaha hadda la dhigayo
     let totalScoreOfMove = selectedCards.reduce((sum, c) => sum + (pointValues[String(c.value).toLowerCase()] || 0), 0);
 
+    // 2. Hubi haddii uu hore u furnaa iyo haddii kale
     if (!isOpened) {
-        // Hubi 101
         let currentTotal = temporaryScore + totalScoreOfMove;
         let allSetsSoFar = [...myOpenedSets, ...validGroups];
         const hasFourPlus = allSetsSoFar.some(g => g.length >= 4);
 
         if (currentTotal >= 101 && hasFourPlus) {
-            // Halkan ayaan u diraynaa Server-ka
-            socket.emit("meldSets", allSetsSoFar); 
-            
+            // --- WAAD DEGTAY ---
             isOpened = true;
             iHaveOpened = true;
             myOpenedSets = allSetsSoFar;
-            myHand = myHand.filter(c => !c.selected);
-            temporaryScore = 0; // Dib u bilaaw maadaama aad degtay
-            
+
+            // KA SAAR GACANTA
+            const selectedIds = selectedCards.map(c => c.id);
+            myHand = myHand.filter(c => !selectedIds.includes(c.id));
+
+            // U DIR SERVER-KA (Xogta rasmiga ah)
+            socket.emit("meldSets", allSetsSoFar); 
+            socket.emit("syncHandAfterMeld", myHand); // Server-ka ha ogaado in kaararku kaa go'een
+
+            temporaryScore = 0;
             renderMyHand();
             renderMyTableSets();
             alert("Waad degtay! Dhibcahaaga: " + currentTotal);
         } else {
-            // Halkan waxaad ku ururinaysaa kaararka miiska saaran laakiin aan weli 101 gaarin
+            // --- WELI MAAAD DEGIN (URURIN) ---
             temporaryScore += totalScoreOfMove;
             myOpenedSets.push(...validGroups);
-            myHand = myHand.filter(c => !c.selected);
+
+            // KA SAAR GACANTA (Xitaa haddii aad ururinayso si uusan u soo noqon)
+            const selectedIds = selectedCards.map(c => c.id);
+            myHand = myHand.filter(c => !selectedIds.includes(c.id));
+            
+            socket.emit("syncHandAfterMeld", myHand); // Cusboonaysii server-ka mar kasta
+
             renderMyHand();
             renderMyTableSets();
             alert(`Wadarta: ${temporaryScore}. Sii wad ilaa 101 ama hal koox oo 4 ah!`);
         }
     } else {
-        // Haddii aad hore u furnayd, kaliya ku dar kuwa cusub
+        // --- HADDII AAD HORE U FURNAYD ---
+        const selectedIds = selectedCards.map(c => c.id);
+        myHand = myHand.filter(c => !selectedIds.includes(c.id));
+
         socket.emit("meldSets", validGroups); 
+        socket.emit("syncHandAfterMeld", myHand); 
+
         myOpenedSets.push(...validGroups);
-        myHand = myHand.filter(c => !c.selected);
         renderMyHand();
         renderMyTableSets();
     }
@@ -436,50 +449,45 @@ function renderSets(elementId, sets) {
 }
 
 socket.on("updateTableUI", (data) => {
-    // 1. Hubi xogta soo gashay
     const { players, nextRequiredPoints } = data;
     if (!players) return;
 
     const myId = socket.id;
 
-    // 2. Nadiifi dhammaan boosaska miiska (Slots)
+    // 1. Nadiifi miiska
     const slots = ["pos-top", "pos-left", "pos-right", "pos-bottom"];
     slots.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.innerHTML = "";
     });
 
-    // 3. Hel halka aad adigu kaga jirto liiska (index)
     const myIndex = players.findIndex(p => p.id === myId);
     if (myIndex === -1) return;
 
-    // 4. Mid mid u mari dhammaan ciyaartoyda
+    // 2. Sawir kaararka ciyaartoyda
     players.forEach((p, index) => {
-        // Kaliya soo bandhig ciyaaryahanka degay (isOpened)
         if (!p.isOpened || !p.openedSets) return;
 
-        // Xisaabi booska qofka marka adiga lagu barbardhigo (Rotation logic)
         const diff = (index - myIndex + 4) % 4;
         let slotId = "";
-        if (diff === 0) slotId = "pos-bottom";      // John (Adiga)
-        else if (diff === 1) slotId = "pos-right";   // Antonella
-        else if (diff === 2) slotId = "pos-top";     // Bruno
-        else if (diff === 3) slotId = "pos-left";    // Antonio
+        if (diff === 0) slotId = "pos-bottom";
+        else if (diff === 1) slotId = "pos-right";
+        else if (diff === 2) slotId = "pos-top";
+        else if (diff === 3) slotId = "pos-left";
 
         const slotArea = document.getElementById(slotId);
         if (!slotArea) return;
 
-        // 5. Sawir koox kasta (Meld/Set)
         p.openedSets.forEach(set => {
             const setDiv = document.createElement("div");
             setDiv.className = "melted-group"; 
-
-            // Jihada: Haddii ay dhinacyada yihiin ha u dhisnaadeen kor-iyo-hoos
-            if (slotId === "pos-left" || slotId === "pos-right") {
-                setDiv.style.flexDirection = "column";
-            } else {
-                setDiv.style.flexDirection = "row";
-            }
+            
+            // --- ISBEDELKA HALKAN AA BUU KU JIRAA ---
+            // Ka dhig 'row' si ay u jiifaan (dadab) dhammaan boosaska
+            setDiv.style.display = "flex";
+            setDiv.style.flexDirection = "row"; 
+            setDiv.style.flexWrap = "nowrap";
+            setDiv.style.marginBottom = "10px";
 
             set.forEach((card, cardIndex) => {
                 const img = document.createElement("img");
@@ -489,18 +497,17 @@ socket.on("updateTableUI", (data) => {
                 
                 img.src = `/cards/${fileName}`;
                 img.className = "melted-card";
+                
+                // Style-ka kaarka yar ee miiska
+                img.style.width = "40px";
+                img.style.height = "auto";
                 img.style.position = "relative";
-                img.style.zIndex = cardIndex; // Kan dambe ha dul saarnaado kan hore
+                img.style.zIndex = cardIndex;
 
-                // Logic-ga overlap-ka (Si ay isku dhex galaan sidii sawirkaaga)
+                // Overlap-ka dhinac (Horizontal overlap)
                 if (cardIndex > 0) {
-                    if (slotId === "pos-left" || slotId === "pos-right") {
-                        img.style.marginTop = "-38px"; 
-                        img.style.marginLeft = "0px";
-                    } else {
-                        img.style.marginLeft = "-25px"; 
-                        img.style.marginTop = "0px";
-                    }
+                    img.style.marginLeft = "-25px"; // Isku riix dhinac ah
+                    img.style.marginTop = "0px";    // Ha u dejin hoos
                 }
                 
                 setDiv.appendChild(img);
@@ -509,7 +516,6 @@ socket.on("updateTableUI", (data) => {
         });
     });
 
-    // 6. Cusboonaysii dhibcaha soo socda (Haddii loo baahan yahay)
     const req = document.getElementById("requiredPoints");
     if (req && nextRequiredPoints) req.innerText = nextRequiredPoints;
 });

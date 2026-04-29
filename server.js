@@ -357,6 +357,17 @@ io.on("connection", (socket) => {
             }
         }
     });
+	
+	socket.on("syncHandAfterMeld", (updatedHand) => {
+    const room = rooms[socket.roomId];
+    if (!room) return;
+    
+    const p = room.players.find(player => player.id === socket.id);
+    if (p) {
+        p.hand = updatedHand; // Halkan ayaa ah meesha server-ka loogu sheegayo tirada cusub
+        console.log(`Sync: ${p.name} gacantiisa waa la cusboonaysiiyay. Tirada hadda: ${updatedHand.length}`);
+    }
+  });
 
     /* 5. DISCONNECT */
     socket.on("disconnect", () => {
