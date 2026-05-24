@@ -613,4 +613,8 @@ io.on('connection', socket => {
   });
 });
 
-httpServer.listen(PORT, () => console.log(`Turubka 101 server running on http://localhost:${PORT}`));
+const PORT = process.env.PORT || 10000;
+
+server.listen(PORT, () => {
+    console.log(`Turubka 101 server is running successfully on port ${PORT}`);
+});
