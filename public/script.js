@@ -495,7 +495,7 @@ function handleTuur() {
 // ===================== WAITING ROOM =====================
 
 function startWaitingCountdown() {
-  waitingCountdown = 360;
+  waitingCountdown = 10;
   const noteEl = $('waiting-auto-note');
   if (noteEl) noteEl.textContent = `(Robotyadu si toos ah ayay ku biiraan ${waitingCountdown}s)`;
   if (waitingAutoTimer) clearInterval(waitingAutoTimer);
@@ -719,6 +719,8 @@ function initSocket() {
 
   setInterval(() => socket.emit('ping_keep_alive'), 25000);
 }
+
+
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && socket) socket.emit('request_sync');

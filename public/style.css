@@ -475,105 +475,380 @@ body {
   font-size: .85rem;
   font-weight: 600;
 }
+
+
 /* ======================== MOBILE OPTIMIZATION (MEDIA QUERY) ======================== */
 @media (max-width: 768px) {
-  body {
-    overflow-y: auto; /* Waxay u oggolaanaysaa mobile-ka inuu xoogaa u fariisto haddii loo baahdo */
-  }
-
-  /* 1. Miiska felt-oval-ka rasmiga ah oo loo dhuubay mobile-ka */
-  .felt-oval {
-    width: 95% !important;
-    height: 60% !important;
-    top: 5%;
-    border-radius: 40px; /* Laga dhigay labajibbaaran geesaha ka wareegsan si uu shaashadda u buuxiyo */
-    border-width: 6px;
-  }
-
-  /* 2. Meelaynta Ciyaartoyda (Slots) ee Mobile-ka */
-  .slot-top { top: 2% !important; }
-  .slot-left { left: 4% !important; }
-  .slot-right { right: 4% !important; }
-
-  /* 3. Badhamada miiska dhexdiisa ku jira (Stock & Discard) */
-  .piles-center {
-    gap: 15px !important;
-  }
-  .card-back-lg, .discard-empty, .card.lg {
-    width: 55px !important;
-    height: 77px !important;
-  }
-  .stock-count {
-    font-size: 1.1rem !important;
-  }
-
-  /* 4. MEESHA GACANTA (Hand Area) - Halkan ayaa ah meesha ugu muhiimsan */
-  #hand-area {
+  /* ROOT */
+  html, body {
+    width: 100%; height: 100%;
+    margin: 0; padding: 0;
+    background: #061114;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: manipulation;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100vw;
-    padding: 8px 6px 12px !important;
-    background: linear-gradient(to top, rgba(0,0,0,1) 80%, rgba(0,0,0,0.8) 100%);
-    z-index: 9999;
-  }
-
-  /* 5. KAARARKA GACANTA - Hal xariiq oo isku dhex jira (No Row Wrapping) */
-  .hand-cards {
-    display: flex !important;
-    flex-wrap: nowrap !important; /* Waxay diidaysaa inay kaararku dhowr saf noqdaan */
-    overflow-x: auto; /* Waxay oggolaanaysaa in farta loogu kaxaysto bidix iyo midig haddii ay badataa */
-    justify-content: flex-start !important; /* Waxay ka bilaabaysaa bidixda si ay u silisato */
-    padding: 15px 10px 5px !important;
-    gap: 0px !important; /* Waxaan u isticmaalaynaa margin si ay isu dul fuulaan */
-    min-height: 90px !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  /* Kaararka dhexdooda si ay isu dul fuulaan (Overlap) */
-  .hand-cards .card.md {
-    width: 52px !important; /* Wax yar waa la dhuubay */
-    height: 74px !important;
-    margin-right: -14px !important; /* Mid kasta wuxuu ku dhex dhuumanayaa kaarka ku xiga */
-    font-size: 11px;
-  }
-
-  /* Marka la xusho kaarka (Selected) kor ha u baxo */
-  .hand-cards .card.md.selected {
-    transform: translateY(-15px) !important;
-    margin-right: -10px !important; /* Si kaarka ku xiga u muuqdo */
-  }
-
-  /* 6. BADHAMADA KONTOROOLKA (Controls Row) */
-  .controls-row {
-    flex-direction: column-reverse !important; /* Badhamada iyo dhibcaha isku beddel */
-    gap: 8px !important;
-  }
-
-  .btn-group {
-    width: 100%;
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr); /* Waxay u qaybinaysaa badhamada 3 saf oo isle'eg */
-    gap: 6px !important;
-  }
-
-  .btn-green, .btn-gray, .btn-blue, .btn-red {
-    padding: 8px 4px !important;
-    font-size: 0.75rem !important;
-    text-align: center;
-    border-radius: 8px !important;
-    width: 100% !important;
   }
   
-  /* Badhanka Isuga ha fariisto safka hoose isagoo weyn */
-  #btn-pause {
-     grid-column: span 3; /* Wuxuu qaadanayaa ballaca saddexda badhan oo dhan */
+  /* ── HAND AREA: HALKAN BAAN KA SAARNAY DISPLAY: NONE SI AY U SOO MUUQATO ── */
+  #hand-area {
+    /* display: none !important;  <-- Kan baa qarinayey badhamada, waan ka saarnay! */
+  }
+  
+  /* ── FOOTER: DIB U QARI KAN (MAAHA BADHAMADA CIYAARTA) ─────────────────────── */
+  #game-screen .footer-game {
+    display: none !important;
+  }
+  
+  /* ── GAME SCREEN ────────────────────────────────────────────── */
+  #game-screen.active {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    padding-top: env(safe-area-inset-top, 0) !important;
+  }
+  
+  /* ── HEADER ─────────────────────────────────────────────────── */
+  #game-screen.active #game-header {
+    position: relative !important;
+    z-index: 200 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    flex-shrink: 0 !important;
+    padding: 4px 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 6px !important;
+  }
+  #game-screen.active #hdr-name {
+    font-size: .72rem !important; max-width: 70px !important;
+    overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important;
+  }
+  #game-screen.active #hdr-turn  { flex: 1 !important; text-align: center !important; font-size: .6rem !important; }
+  #game-screen.active #hdr-score { font-size: .7rem !important; }
+  #game-screen.active #btn-exit  { font-size: .64rem !important; padding: 2px 7px !important; }
+  
+  /* ── TABLE AREA ──────────────────────────────────────────────── */
+  #game-screen.active #table-area {
+    position: relative !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    overflow: visible !important; 
+    padding-bottom: 125px !important; /* Boos deeqsinimo leh oo loo daayey sets-ka */
+    box-sizing: border-box !important;
+  }
+  
+  /* ── FELT OVAL: MIISKA CAGAARAN ── */
+  #game-screen.active .felt-oval {
+    position: absolute !important;
+    /* wax yar kor */
+    top: 36% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    /* dhinacyaha wax yar ballaari */
+    width: 97% !important;
+    /* kor iyo hoos si siman u dheeree */
+    height: 52% !important;
+    max-width: 410px !important;
+    max-height: 290px !important;
+    border-width: 4px !important;
+    /* oval-ka sii qurxi */
+    border-radius: 110px !important;
+    z-index: 1 !important;
+  }
+  
+  /* ── SMALL CARDS ────────────────────────────────────────────── */
+  #game-screen.active .card-back-sm,
+  #game-screen.active .slot-top .card-back-sm,
+  #game-screen.active .slot-left .card-back-sm,
+  #game-screen.active .slot-right .card-back-sm {
+    width: 28px !important; height: 40px !important;
+    min-width: 28px !important; min-height: 40px !important;
+    max-width: 28px !important; max-height: 40px !important;
+    border-radius: 4px !important; flex-shrink: 0 !important;
+  }
+  #game-screen.active .card-back-sm::after { font-size: .8rem !important; }
+  
+  /* ── TOP PLAYER ─────────────────────────────────────────────── */
+  #game-screen.active .slot-top {
+    position: absolute !important;
+    top: 4% !important; left: 50% !important;
+    transform: translateX(-50%) !important;
+    display: flex !important; flex-direction: column !important;
+    align-items: center !important; z-index: 60 !important;
+  }
+  #game-screen.active .slot-top .player-badge { font-size: .55rem !important; padding: 2px 7px !important; margin-bottom: 2px !important; }
+  #game-screen.active .slot-top .opponent-cards { display: flex !important; flex-direction: row !important; justify-content: center !important; }
+  #game-screen.active .slot-top .opponent-cards .card-back-sm { margin-right: -22px !important; }
+  #game-screen.active .slot-top .opponent-cards .card-back-sm:last-child { margin-right: 0 !important; }
+  
+  /* ── LEFT PLAYER (FAARAX): MAGACA BANAANKA XIGO, TURUBKA GUDAHA ── */
+  #game-screen.active .slot-left {
+    position: absolute !important;
+    left: 4px !important;
+    top: 34% !important;
+    transform: translateY(-50%) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 3px !important;
+    z-index: 60 !important;
+    width: auto !important;
+  }
+  #game-screen.active .slot-left .player-badge {
+    writing-mode: vertical-lr !important;
+    transform: rotate(180deg) !important;
+    font-size: .52rem !important;
+    flex-shrink: 0 !important;
+    /* MAGACA BANAANKA */
+    order: 1 !important;
+
+    /* CABBIRKA IYO WAREEGGA KOOBAAN EE OVAL-KA SAXDA AH */
+    width: 22px !important;           /* Ballaca go'an si uu u dhuubto */
+    min-height: 90px !important;      /* Dherer dheeri ah si uusan quadrat u noqon */
+    border-radius: 50px !important;    /* Geesaha oo oval goobaabin ah laga dhigo */
+    padding: 12px 0 !important;        /* Boos siman oo kor iyo hoos ah */
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    background: #0d1e24 !important;
+    border: 1px solid #d4a017 !important;
+    color: #fff !important;
+
+    /* NIDAAMINTA QORAALKA GUDAHA SI AYNA XARFUHU U FIDMIN */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;               /* Masaafada magaca iyo dhibcaha */
+    letter-spacing: 0px !important;
+  }
+  #game-screen.active .slot-left .opponent-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0 !important;
+    /* TURUBKA GUDAHA */
+    order: 2 !important;
+  }
+  #game-screen.active .slot-left .opponent-cards .card-back-sm {
+    margin-bottom: -34px !important;
+    margin-right: 0 !important;
+  }
+  #game-screen.active .slot-left .opponent-cards .card-back-sm:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* ── RIGHT PLAYER (JAAMAC): MAGACA BANAANKA XIGO, TURUBKA GUDAHA ── */
+  #game-screen.active .slot-right {
+    position: absolute !important;
+    right: 4px !important;
+    top: 34% !important;
+    transform: translateY(-50%) !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 3px !important;
+    z-index: 60 !important;
+    width: auto !important;
+  }
+  #game-screen.active .slot-right .player-badge {
+    writing-mode: vertical-lr !important;
+    transform: rotate(180deg) !important;
+    font-size: .52rem !important;
+    flex-shrink: 0 !important;
+    /* MAGACA BANAANKA */
+    order: 2 !important;
+
+    /* CABBIRKA IYO WAREEGGA KOOBAAN EE OVAL-KA SAXDA AH */
+    width: 22px !important;           /* Ballaca go'an si uu u dhuubto */
+    min-height: 90px !important;      /* Dherer dheeri ah si uusan quadrat u noqon */
+    border-radius: 50px !important;    /* Geesaha oo oval goobaabin ah laga dhigo */
+    padding: 12px 0 !important;        /* Boos siman oo kor iyo hoos ah */
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    background: #0d1e24 !important;
+    border: 1px solid #d4a017 !important;
+    color: #fff !important;
+
+    /* NIDAAMINTA QORAALKA GUDAHA SI AYNA XARFUHU U FIDMIN */
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;               /* Masaafada magaca iyo dhibcaha */
+    letter-spacing: 0px !important;
+  }
+  #game-screen.active .slot-right .opponent-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 0 !important;
+    /* TURUBKA GUDAHA */
+    order: 1 !important;
+  }
+  #game-screen.active .slot-right .opponent-cards .card-back-sm {
+    margin-bottom: -34px !important;
+    margin-right: 0 !important;
+  }
+  #game-screen.active .slot-right .opponent-cards .card-back-sm:last-child {
+    margin-bottom: 0 !important;
+  }
+  
+  /* ── CENTER PILES ────────────────────────────────────────────── */
+  #game-screen.active .piles-center {
+    position: absolute !important;
+    top: 34% !important;          
+    left: 50% !important;
+    transform: translate(-50%,-50%) !important;
+    display: flex !important; gap: 12px !important; z-index: 50 !important;
+  }
+  #game-screen.active .card-back-lg,
+  #game-screen.active .discard-empty,
+  #game-screen.active .piles-center .card.lg {
+    width: 44px !important; height: 62px !important; border-radius: 7px !important;
+  }
+  
+  /* ── CABBIRKA KAARARKA LA DHIGO OO LA YAREEYEY (SIDA JAAMAC) ── */
+  #game-screen.active .player-sets .card,
+  #game-screen.active .player-set .card,
+  #game-screen.active .my-table-sets .card,
+  #game-screen.active .card.md,
+  #game-screen.active [class*="set"] .card {
+    width: 25px !important;       
+    height: 36px !important;      
+    min-width: 25px !important;
+    min-height: 36px !important;
+    border-radius: 3px !important;
+    font-size: 7px !important;
+  }
+  #game-screen.active .my-table-sets .set-container,
+  #game-screen.active .player-set,
+  #game-screen.active .player-sets {
+    gap: 1px !important;
+  }
+  
+  /* ── MY SETS: BOOSKA KAAARARKA AAD DEGTAY ── */
+  #game-screen.active .my-table-sets {
+    position: absolute !important;
+    left: 50% !important;
+    bottom: 175px !important;     /* Kor baa loo qaaday si ay magaca iyo gacan-ku-haynta uga fogaadaan */
+    transform: translateX(-50%) !important;
+    max-width: 92% !important; 
+    z-index: 150 !important;
   }
 
-  .score-info {
-    width: 100%;
-    text-align: center !important;
-    font-size: 0.8rem !important;
-    margin-bottom: 2px;
+  /* ── MY NAME BADGE: WUXUU HADDA FIXED KU DUL SABEYNAYAA GACANTA ── */
+  #game-screen.active .my-name-badge {
+    position: fixed !important;
+    left: 50% !important;
+    bottom: 142px !important;     /* Kor baa loo qaaday si uu uga sarreeyo labada saf ee badhamada */
+    transform: translateX(-50%) !important;
+    font-size: .62rem !important;
+    padding: 3px 9px !important;
+    background: #0d1e24 !important;
+    border: 1px solid #d4a017 !important;
+    color: #fff !important;
+    border-radius: 999px !important;
+    z-index: 20000 !important;
+    pointer-events: none !important;
+  }
+  
+  /* ── HAND AREA: NIDAAAMKA DHERERKA GACANTA (WAA UU ACTIVE AHAY) ── */
+  #game-screen.active #hand-area {
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 136px !important;     /* Waxaa laga dhigay 136px (halkii ay ka ahayd 98px) si labada saf u muuqdaan */
+    flex-direction: column !important;
+    gap: 4px !important;
+    background: #081014 !important;
+    border-top: 2px solid #d4a017 !important;
+    /* Padding-ka hoose waa la nidaamiyey si badhamada safka labaad aysan u dhuuman */
+    padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px) 6px !important;
+    z-index: 9999 !important;
+    box-sizing: border-box !important;
+  }
+  
+  /* ── HAND CARDS: CABBIRKA KAARARKA GACANTA OO LA DEJIXIYEEY ── */
+  #game-screen.active .hand-cards {
+    width: 100% !important;
+    height: 56px !important;       
+    min-height: 56px !important;
+    display: flex !important;
+    flex-flow: row nowrap !important; 
+    overflow-x: auto !important;     
+    overflow-y: hidden !important; 
+    padding: 2px 4px !important;
+    align-items: flex-end !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+  }
+  #game-screen.active .hand-cards::-webkit-scrollbar { display: none !important; }
+  
+  /* KAARARKA GACANTA */
+  #game-screen.active .hand-cards .card,
+  #game-screen.active .hand-cards .card.md {
+    width: 36px !important;       
+    height: 50px !important;       
+    min-width: 36px !important;
+    max-height: 50px !important;
+    margin-right: -10px !important;
+    border-radius: 5px !important;
+    flex-shrink: 0 !important;
+  }
+  #game-screen.active .hand-cards .card:last-child { margin-right: 4px !important; }
+  #game-screen.active .hand-cards .card.selected { transform: translateY(-5px) !important; }
+  #game-screen.active .hand-cards .card .cv     { font-size: 10px !important; }
+  #game-screen.active .hand-cards .card .cs     { font-size: .75rem !important; }
+  #game-screen.active .hand-cards .card .cv-bot { font-size: 8px !important; }
+  
+  /* ── CONTROLS ROW: BADHAMADA ── */
+  #game-screen.active .controls-row {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+  }
+  #game-screen.active .btn-group {
+    flex: 1 1 auto !important;
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+  }
+  #game-screen.active .score-info {
+    flex: 0 0 auto !important;
+    width: 52px !important;
+    font-size: .46rem !important;
+    text-align: right !important;
+    line-height: 1.2 !important;
+    padding: 0 !important; margin: 0 !important;
+    color: rgba(255,255,255,.55) !important;
+    white-space: nowrap !important;
+  }
+  #game-screen.active .btn-green,
+  #game-screen.active .btn-gray,
+  #game-screen.active .btn-blue,
+  #game-screen.active .btn-red {
+    height: 26px !important;      
+    min-height: 26px !important;
+    font-size: .56rem !important;
+    padding: 2px !important;
+    border-radius: 6px !important;
+    line-height: 1 !important;
+    width: 100% !important;
+    white-space: nowrap !important;
   }
 }
