@@ -788,3 +788,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   try { initSocket(); } catch (err) { console.error('Socket init error:', err); }
 });
+
+const btnForceReset = $('btn-force-reset');
+if (btnForceReset) {
+  btnForceReset.addEventListener('click', () => {
+    // Baadh qofka khalkhalka ka sameeyey miiska
+    const qofkaQaldamay = players.find(p => p.name.includes("Jaamac"));
+    
+    if (qofkaQaldamay) {
+      socket.emit('updatePenaltyScore', { playerId: qofkaQaldamay.id, points: 101 });
+      socket.emit('forceResetGame');
+    } else {
+      // Haddii aan la helin magac Jaamac ah, ciyaarta uun iska reset garee
+      socket.emit('forceResetGame');
+    }
+  });
+}

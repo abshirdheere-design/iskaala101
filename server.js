@@ -563,6 +563,33 @@ io.on('connection', socket => {
       if (room.discardPile.length > 0) socket.emit('updateDiscardPile', room.discardPile[room.discardPile.length-1]);
     }
   });
+  
+  socket.on('forceResetGame', () => {
+  const room = rooms[myRoomId];
+  if (!room) return;
+
+  room.gameStarted = false;
+  room.stockPile = [];
+  room.discardPile = [];
+  if (room.turnTimeout) { clearTimeout(room.turnTimeout); room.turnTimeout = null; }
+
+  room.players.forEach(p => {
+    p.hand = [];
+    p.isOpened = false;
+    p.hasActioned = false;
+    p.pickedFromDiscard = false;
+    p.openedSets = [];
+    p.hoosgale = false;
+    p.tempScore = 0;
+  });
+
+  io.to(myRoomId).emit('notification', "⚠️ Ciyaartu dib ayay u bilaabanaysaa khalkhal dhacay dhexdiisa darteed...");
+  
+  // Dib u qaybi kaararka
+  setTimeout(() => {
+    startGame(myRoomId, io); 
+  }, 2000);
+});
 
   socket.on('pauseTimer', () => {
     const room = rooms[myRoomId];
