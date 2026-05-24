@@ -612,9 +612,3 @@ io.on('connection', socket => {
     else updateRoomPlayers(myRoomId, io);
   });
 });
-
-const PORT = process.env.PORT || 10000;
-
-server.listen(PORT, () => {
-    console.log(`Turubka 101 server is running successfully on port ${PORT}`);
-});
