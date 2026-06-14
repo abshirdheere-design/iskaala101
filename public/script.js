@@ -140,7 +140,18 @@ function autoSplitIntoGroups(cards) {
   const vals = [...new Set(remaining.map(c => c.value))];
   vals.forEach(val => {
     const vc = remaining.filter(c => c.value === val && !usedIdx.has(c._i));
-    if (vc.length >= 3) { groups.push(vc.map(({_i,...r})=>r)); vc.forEach(c=>usedIdx.add(c._i)); }
+    const uniqueSuitGroup = [];
+    const seenSuits = new Set();
+    vc.forEach(card => {
+      if (!seenSuits.has(card.suit) && uniqueSuitGroup.length < 4) {
+        seenSuits.add(card.suit);
+        uniqueSuitGroup.push(card);
+      }
+    });
+    if (uniqueSuitGroup.length >= 3) {
+      groups.push(uniqueSuitGroup.map(({_i,...r})=>r));
+      uniqueSuitGroup.forEach(c => usedIdx.add(c._i));
+    }
   });
   return groups;
 }
@@ -413,10 +424,73 @@ function handlePickDiscard() {
 function handleDhigo() {
   if (!isMyTurn) { showNotification('Sug doorkaaga!'); return; }
   const selected = myHand.filter(c => c.selected);
-  if (selected.length < 3) { showNotification('Dooro ugu yaraan 3 kaar!'); return; }
+  if (selected.length === 0) { showNotification('Fadlan dooro kaarka aad dhigayso!'); return; }
+
+  if (isOpened && selected.length < 3) {
+    let allTableSets = [];
+    if (typeof tablePlayers !== 'undefined' && tablePlayers.length) {
+      allTableSets = tablePlayers.flatMap(p => p.openedSets || []);
+    } else {
+      allTableSets = [...myOpenedSets];
+    }
+
+    let validAdditions = [];
+    let invalidCards = [];
+
+    selected.forEach(card => {
+      let fitsInAnySet = false;
+
+      allTableSets.forEach(set => {
+        if (!set || set.length < 3) return;
+
+        const isSequence = set[0].suit === set[1].suit;
+        if (isSequence && card.suit === set[0].suit) {
+          const sortedValues = set.map(c => getCardValue(c)).sort((a, b) => a - b);
+          const minVal = sortedValues[0];
+          const maxVal = sortedValues[sortedValues.length - 1];
+          const myVal = getCardValue(card);
+
+          if (myVal === minVal - 1 || myVal === maxVal + 1) {
+            fitsInAnySet = true;
+          }
+        } 
+        else if (!isSequence && card.value === set[0].value) {
+          const alreadyHasSuit = set.some(c => c.suit === card.suit);
+          if (!alreadyHasSuit && set.length < 4) {
+            fitsInAnySet = true;
+          }
+        }
+      });
+
+      if (fitsInAnySet) {
+        validAdditions.push(card);
+      } else {
+        invalidCards.push(card);
+      }
+    });
+
+    if (invalidCards.length > 0) {
+      showNotification(`Kaarka ${invalidCards[0].value}${invalidCards[0].suit} kuma darsami karo kooxaha miiska saaran!`);
+      return;
+    }
+
+    if (validAdditions.length > 0) {
+      const selectedIds = new Set(validAdditions.map(c => c.id));
+      myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
+      socket.emit('addToExistingSets', { cards: validAdditions });
+      socket.emit('syncHandAfterMeld', myHand);
+      showNotification(`Waad ku darsatay miiska ${validAdditions.length} kaar!`);
+      renderAll();
+      return;
+    }
+  }
+
+  if (selected.length < 3) { showNotification('Dooro ugu yaraan 3 kaar oo koox ah!'); return; }
+  
   const { validGroups, remaining } = findValidGroups(selected);
   if (remaining.length > 0) { showNotification(`Kaarka ${remaining[0].value} ma geli karo koox!`); return; }
   const moveScore = selected.reduce((s, c) => s + cardPoints(c), 0);
+  
   if (!isOpened) {
     const currentTotal = temporaryScore + moveScore;
     const allSetsSoFar = [...myOpenedSets, ...validGroups];
@@ -468,16 +542,25 @@ function handleReset() {
 function handleTuur() {
   if (!isMyTurn) { showNotification('Sug doorkaaga!'); return; }
   if (myHand.length === 14 && !hasDrawn) { showNotification('Fadlan marka hore kaar qaado!'); return; }
+  
   if (pickedFromDiscard && !isOpened) {
     const score = myHand.filter(c => c.selected).reduce((s, c) => s + cardPoints(c), 0);
     if (score < 101) { showNotification('Maadaama aad tuurista qaadatay, waa inaad degtaa (101)!'); return; }
     else { showNotification("Fadlan marka hore riix 'Dhigo' si aad u degto!"); return; }
   }
+  
   const selIdx = myHand.findIndex(c => c.selected);
   if (selIdx === -1) { showNotification('Dooro kaarka aad tuurayso!'); return; }
-  const remaining = myHand.length - 1;
-  if (remaining === 1 || remaining === 2) { showNotification('Xeerka Batuutada: Ma kuu hari karaan 1 ama 2 xabo!'); return; }
+  
   const cardToPlay = myHand[selIdx];
+  const remaining = myHand.length - 1;
+
+  let isBatuutoMove = false;
+  if (isOpened && remaining === 2) {
+    isBatuutoMove = true;
+    showNotification('🚨 Waxaad gashay Batuuto! Kaararkaaga waxaa lagu celinayaa Madafaca.', 5000);
+  }
+
   const discardEl = $('discard-display');
   if (discardEl) {
     discardEl.classList.remove('card-throw-anim');
@@ -485,9 +568,19 @@ function handleTuur() {
     discardEl.classList.add('card-throw-anim');
     discardEl.addEventListener('animationend', () => discardEl.classList.remove('card-throw-anim'), { once: true });
   }
-  socket.emit('playCard', cardToPlay);
+
+  socket.emit('playCard', { card: cardToPlay, isBatuuto: isBatuutoMove });
   myHand.splice(selIdx, 1);
-  isMyTurn = false; hasDrawn = false; pickedFromDiscard = false;
+  
+  if (isBatuutoMove) {
+    myHand = [];
+    isOpened = false;
+    myOpenedSets = [];
+  }
+
+  isMyTurn = false; 
+  hasDrawn = false; 
+  pickedFromDiscard = false;
   clearInterval(turnTimerInterval);
   renderAll();
 }
@@ -666,6 +759,7 @@ function initSocket() {
 
   socket.on('gameOver', data => {
     clearInterval(turnTimerInterval);
+
     if (data.winnerId === socket.id) {
       const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
       if (fooroTarget && !fooroTarget.isBot) {
@@ -673,15 +767,20 @@ function initSocket() {
         showNotification(`FOORO! ${fooroTarget.name} ayaa 101 dhibco helay!`, 6000);
       }
     }
+
     const modal = $('gameover-modal');
     if (modal) modal.classList.remove('hidden');
+
     if (data.winnerId === socket.id) {
       const icon = $('modal-icon'); if (icon) icon.textContent = '🏆';
       const title = $('modal-title'); if (title) title.textContent = 'WAAD GUULEYSATAY!';
       const body = $('modal-body'); if (body) body.textContent = `Hambalyo, ${myName}!`;
     } else {
-      const winnerIsBot = data.allPlayers && data.allPlayers.find(p => p.id === data.winnerId && p.isBot);
-      const icon = $('modal-icon'); if (icon) icon.textContent = winnerIsBot ? '🤖' : '🃏';
+      const localWinner = players.find(p => p.id === data.winnerId);
+      const isBot = (localWinner && localWinner.isBot) || 
+                    (data.winnerName && (data.winnerName.includes('JIMCAALE') || data.winnerName.includes('FAARAX')));
+      const icon = $('modal-icon'); 
+      if (icon) icon.textContent = isBot ? '🤖' : '🃏';
       const title = $('modal-title'); if (title) title.textContent = 'CIYAARTU WAA DHAMMAATAY';
       const body = $('modal-body'); if (body) body.innerHTML = `<span style="color:#2ecc71;font-weight:700">${data.winnerName}</span> ayaa guuleystay!`;
     }
@@ -719,8 +818,6 @@ function initSocket() {
 
   setInterval(() => socket.emit('ping_keep_alive'), 25000);
 }
-
-
 
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && socket) socket.emit('request_sync');
@@ -786,21 +883,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const btnForceReset = $('btn-force-reset');
+  if (btnForceReset) {
+    btnForceReset.addEventListener('click', () => {
+      if (!socket) return;
+      socket.emit('forceResetGame');
+    });
+  }
+
   try { initSocket(); } catch (err) { console.error('Socket init error:', err); }
 });
-
-const btnForceReset = $('btn-force-reset');
-if (btnForceReset) {
-  btnForceReset.addEventListener('click', () => {
-    // Baadh qofka khalkhalka ka sameeyey miiska
-    const qofkaQaldamay = players.find(p => p.name.includes("Jaamac"));
-    
-    if (qofkaQaldamay) {
-      socket.emit('updatePenaltyScore', { playerId: qofkaQaldamay.id, points: 101 });
-      socket.emit('forceResetGame');
-    } else {
-      // Haddii aan la helin magac Jaamac ah, ciyaarta uun iska reset garee
-      socket.emit('forceResetGame');
-    }
-  });
-}

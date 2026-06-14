@@ -55,6 +55,62 @@ function refillStockIfEmpty(roomId, rooms, io) {
 
 // ===================== BOT AI =====================
 
+function findBotValidGroups(hand) {
+  const groups = [];
+  const usedIdx = new Set();
+  
+  const suits = ['♠', '♥', '♣', '♦'];
+  const temp = hand.map((c, i) => ({ ...c, _i: i }));
+  
+  suits.forEach(suit => {
+    let sc = temp.filter(c => c.suit === suit && !usedIdx.has(c._i));
+    sc.sort((a, b) => getCardValueServer(a) - getCardValueServer(b));
+    
+    let run = [];
+    for (let i = 0; i < sc.length; i++) {
+      if (!run.length || getCardValueServer(sc[i]) === getCardValueServer(run[run.length - 1]) + 1) {
+        run.push(sc[i]);
+      } else {
+        if (run.length >= 3) {
+          groups.push(run.map(({ _i, ...r }) => r));
+          run.forEach(c => usedIdx.add(c._i));
+        }
+        run = [sc[i]];
+      }
+    }
+    if (run.length >= 3) {
+      groups.push(run.map(({ _i, ...r }) => r));
+      run.forEach(c => usedIdx.add(c._i));
+    }
+  });
+
+  const remaining = temp.filter(c => !usedIdx.has(c._i));
+  const uniqueValues = [...new Set(remaining.map(c => c.value))];
+
+  uniqueValues.forEach(val => {
+    const sameValueCards = remaining.filter(c => c.value === val && !usedIdx.has(c._i));
+    
+    if (sameValueCards.length >= 3) {
+      const uniqueSuitGroup = [];
+      const seenSuits = new Set();
+      
+      sameValueCards.forEach(card => {
+        if (!seenSuits.has(card.suit) && uniqueSuitGroup.length < 4) {
+          seenSuits.add(card.suit);
+          uniqueSuitGroup.push(card);
+        }
+      });
+      
+      if (uniqueSuitGroup.length >= 3) {
+        groups.push(uniqueSuitGroup.map(({ _i, ...r }) => r));
+        uniqueSuitGroup.forEach(c => usedIdx.add(c._i)); 
+      }
+    }
+  });
+
+  return groups;
+}
+
 function serverGetCardValue(card) {
   const map = { A:14, K:13, Q:12, J:11 };
   return map[card.value.toUpperCase()] ?? parseInt(card.value);
@@ -84,7 +140,18 @@ function serverAutoSplitIntoGroups(cards) {
   const vals = [...new Set(remaining.map(c => c.value))];
   vals.forEach(val => {
     const vc = remaining.filter(c => c.value === val && !usedIdx.has(c._i));
-    if (vc.length >= 3) { groups.push(vc.map(({ _i, ...r }) => r)); vc.forEach(c => usedIdx.add(c._i)); }
+    const uniqueSuitGroup = [];
+    const seenSuits = new Set();
+    vc.forEach(card => {
+      if (!seenSuits.has(card.suit) && uniqueSuitGroup.length < 4) {
+        seenSuits.add(card.suit);
+        uniqueSuitGroup.push(card);
+      }
+    });
+    if (uniqueSuitGroup.length >= 3) {
+      groups.push(uniqueSuitGroup.map(({ _i, ...r }) => r));
+      uniqueSuitGroup.forEach(c => usedIdx.add(c._i));
+    }
   });
   return groups;
 }
@@ -342,7 +409,7 @@ function addBotsAndStartGame(roomId, io) {
   const room = rooms[roomId];
   if (!room || room.gameStarted || room._botsAdding) return;
   room._botsAdding = true;
-  const botNames = ['Jaamac-1','Jimcaale-2','Faarax-3'];
+  const botNames = ['JAAMAC','JIMCAALE','FAARAX'];
   const needed = 4 - room.players.length;
   for (let i = 0; i < needed; i++) {
     const botId = `bot_${Math.random().toString(36).slice(2,9)}`;
@@ -354,6 +421,24 @@ function addBotsAndStartGame(roomId, io) {
     io.to(roomId).emit('waitingRoomUpdate', { players: room.players.map(p => ({ name:p.name, isBot:p.isBot })) });
   }
   setTimeout(() => { room._botsAdding = false; startGame(roomId, io); }, 1500);
+}
+
+function botPlayTurn(botPlayer, room, io) {
+  botDrawCard(botPlayer, room);
+  const validSetsToMeld = findBotValidGroups(botPlayer.hand);
+  const totalMeldCardsCount = validSetsToMeld.flatMap(s => s).length;
+  const remainingBeforeDiscard = botPlayer.hand.length - totalMeldCardsCount;
+
+  if (remainingBeforeDiscard === 3) {
+    botPlaySingleCard(botPlayer, room, io); 
+    return;
+  }
+
+  if (totalMeldCardsCount > 0 && (remainingBeforeDiscard === 1 || remainingBeforeDiscard >= 4 || remainingBeforeDiscard === 0)) {
+    executeBotMeld(botPlayer, validSetsToMeld, room, io);
+  }
+
+  botDiscardCard(botPlayer, room, io);
 }
 
 // ===================== EXPRESS + SOCKET.IO =====================
@@ -393,6 +478,9 @@ io.on('connection', socket => {
         socket.emit('matchFound', { roomId:id, topDiscard:room.discardPile[room.discardPile.length-1], currentTurn: cur?cur.id:null });
         updateRoomPlayers(id, io);
         socket.emit('notification','Waad ku soo laabtay!');
+        if (room.gameStarted && cur && cur.isBot && !room.turnTimeout && !room.isPaused) {
+          scheduleBotTurn(id, cur.id, io);
+        }
         return;
       }
     }
@@ -563,33 +651,32 @@ io.on('connection', socket => {
       if (room.discardPile.length > 0) socket.emit('updateDiscardPile', room.discardPile[room.discardPile.length-1]);
     }
   });
-  
+
   socket.on('forceResetGame', () => {
-  const room = rooms[myRoomId];
-  if (!room) return;
+    const room = rooms[myRoomId];
+    if (!room) return;
 
-  room.gameStarted = false;
-  room.stockPile = [];
-  room.discardPile = [];
-  if (room.turnTimeout) { clearTimeout(room.turnTimeout); room.turnTimeout = null; }
+    room.gameStarted = false;
+    room.stockPile = [];
+    room.discardPile = [];
+    if (room.turnTimeout) { clearTimeout(room.turnTimeout); room.turnTimeout = null; }
 
-  room.players.forEach(p => {
-    p.hand = [];
-    p.isOpened = false;
-    p.hasActioned = false;
-    p.pickedFromDiscard = false;
-    p.openedSets = [];
-    p.hoosgale = false;
-    p.tempScore = 0;
+    room.players.forEach(p => {
+      p.hand = [];
+      p.isOpened = false;
+      p.hasActioned = false;
+      p.pickedFromDiscard = false;
+      p.openedSets = [];
+      p.hoosgale = false;
+      p.tempScore = 0;
+    });
+
+    io.to(myRoomId).emit('notification', "⚠️ Ciyaartu dib ayay u bilaabanaysaa khalkhal dhacay dhexdiisa darteed...");
+    
+    setTimeout(() => {
+      startGame(myRoomId, io); 
+    }, 2000);
   });
-
-  io.to(myRoomId).emit('notification', "⚠️ Ciyaartu dib ayay u bilaabanaysaa khalkhal dhacay dhexdiisa darteed...");
-  
-  // Dib u qaybi kaararka
-  setTimeout(() => {
-    startGame(myRoomId, io); 
-  }, 2000);
-});
 
   socket.on('pauseTimer', () => {
     const room = rooms[myRoomId];
