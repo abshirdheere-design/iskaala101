@@ -21,6 +21,11 @@ let turnTimerInterval = null;
 let dragStartIndex = null;
 let waitingAutoTimer = null;
 let waitingCountdown = 10;
+// Tracks whether we are currently inside an active game session.
+// Only true after startHand is received; cleared on gameOver/exit.
+let inGame = false;
+
+const SESSION_KEY = 't101_token';
 
 const POINT_VALUES = { '6':6,'7':7,'8':8,'9':9,'10':10,'j':10,'q':10,'k':10,'a':11 };
 
@@ -49,19 +54,14 @@ function distributeAllCardsAnimated(myCards, opponentCounts, onDone) {
   const handContainer = $('hand-cards');
   if (!container || !handContainer) return;
   handContainer.innerHTML = '';
-  const positions = {
-    top:   { x: 0,    y: -220 },
-    left:  { x: -360, y: 0    },
-    right: { x: 360,  y: 0    },
-  };
+  const positions = { top: { x: 0, y: -220 }, left: { x: -360, y: 0 }, right: { x: 360, y: 0 } };
   const total = myCards.length;
   const opNames = ['right', 'top', 'left'];
   let delay = 0;
   const step = 100;
   opNames.forEach(pos => {
     const count = opponentCounts[pos] || 14;
-    const tx = positions[pos].x;
-    const ty = positions[pos].y;
+    const tx = positions[pos].x, ty = positions[pos].y;
     for (let i = 0; i < count; i++) {
       const d = delay;
       setTimeout(() => {
@@ -82,7 +82,7 @@ function distributeAllCardsAnimated(myCards, opponentCounts, onDone) {
       flying.className = 'card-deal';
       const targetX = -((total - 1) * 36) + (index * 72);
       flying.style.setProperty('--targetX', `${targetX}px`);
-      flying.style.setProperty('--targetY', `260px`);
+      flying.style.setProperty('--targetY', '260px');
       container.appendChild(flying);
       setTimeout(() => {
         flying.remove();
@@ -183,20 +183,12 @@ function applyFooroLogic(winnerId, providerId, allPlayers) {
 
 function makeCard(card, size, opts = {}) {
   const el = document.createElement('div');
-  const isRed = ['♥', '♦'].includes(card.suit);
+  const isRed = ['♥','♦'].includes(card.suit);
   el.className = `card ${size}${opts.selected ? ' selected' : ''}${opts.overlap ? ' overlap' : ''}${isRed ? ' red-suit' : ' black-suit'}`;
-  const cv = document.createElement('div');
-  cv.className = 'cv';
-  cv.textContent = card.value;
-  const cs = document.createElement('div');
-  cs.className = 'cs';
-  cs.textContent = card.suit;
-  const cvBot = document.createElement('div');
-  cvBot.className = 'cv-bot';
-  cvBot.textContent = card.value;
-  el.appendChild(cv);
-  el.appendChild(cs);
-  el.appendChild(cvBot);
+  const cv = document.createElement('div'); cv.className = 'cv'; cv.textContent = card.value;
+  const cs = document.createElement('div'); cs.className = 'cs'; cs.textContent = card.suit;
+  const cvBot = document.createElement('div'); cvBot.className = 'cv-bot'; cvBot.textContent = card.value;
+  el.appendChild(cv); el.appendChild(cs); el.appendChild(cvBot);
   return el;
 }
 
@@ -207,9 +199,7 @@ function makeCardBack(size) {
 }
 
 function renderHeader() {
-  const hdrName = $('hdr-name');
-  const hdrScore = $('hdr-score');
-  const turnEl = $('hdr-turn');
+  const hdrName = $('hdr-name'), hdrScore = $('hdr-score'), turnEl = $('hdr-turn');
   if (!hdrName || !hdrScore || !turnEl) return;
   hdrName.textContent = myName;
   hdrScore.textContent = `Dhibco: ${myScore}`;
@@ -221,22 +211,16 @@ function renderHeader() {
     turnEl.className = 'hdr-turn-idle';
   }
   const badge = $('hdr-opened-badge');
-  if (badge) {
-    if (isOpened) badge.classList.remove('hidden');
-    else badge.classList.add('hidden');
-  }
+  if (badge) { if (isOpened) badge.classList.remove('hidden'); else badge.classList.add('hidden'); }
   const btnPause = $('btn-pause');
   if (btnPause) {
     btnPause.style.display = isMyTurn ? 'inline-block' : 'none';
     if (pickedFromDiscard && !isOpened) {
-      btnPause.textContent = 'Soo Celi';
-      btnPause.style.background = '#f39c12';
+      btnPause.textContent = 'Soo Celi'; btnPause.style.background = '#f39c12';
     } else if (btnPause.dataset.paused === 'true') {
-      btnPause.textContent = 'Fasax';
-      btnPause.style.background = '#f39c12';
+      btnPause.textContent = 'Fasax'; btnPause.style.background = '#f39c12';
     } else {
-      btnPause.textContent = 'Isuga';
-      btnPause.style.background = '';
+      btnPause.textContent = 'Isuga'; btnPause.style.background = '';
     }
   }
 }
@@ -259,8 +243,7 @@ function renderHand() {
   if (selScoreEl) selScoreEl.textContent = selScore;
   const minOpenEl = $('min-open-label');
   if (minOpenEl) minOpenEl.textContent = `U baahan: ${currentMinToOpen}`;
-  const btnDhigo = $('btn-dhigo');
-  const btnTuur = $('btn-tuur');
+  const btnDhigo = $('btn-dhigo'), btnTuur = $('btn-tuur');
   if (btnDhigo) btnDhigo.disabled = !isMyTurn;
   if (btnTuur) btnTuur.disabled = !isMyTurn;
 }
@@ -285,15 +268,9 @@ function renderStockPile() {
 }
 
 function renderOpponentSlot(position, opponentName, count, active, opened, sets, isBot) {
-  const badge = $(`badge-${position}`);
-  const cardsEl = $(`cards-${position}`);
+  const badge = $(`badge-${position}`), cardsEl = $(`cards-${position}`);
   if (!badge || !cardsEl) return;
-  if (!opponentName) {
-    badge.textContent = 'Sugaya...';
-    badge.className = 'player-badge';
-    cardsEl.innerHTML = '';
-    return;
-  }
+  if (!opponentName) { badge.textContent = 'Sugaya...'; badge.className = 'player-badge'; cardsEl.innerHTML = ''; return; }
   const botIcon = isBot ? ' 🤖' : '';
   badge.textContent = `${opponentName}${botIcon}${opened ? ' ✓' : ''} (${count})`;
   badge.className = active ? 'player-badge active' : 'player-badge';
@@ -324,7 +301,7 @@ function getTableSetsAtOffset(offset) {
 
 function renderOpponents() {
   const offsets = { left: 3, top: 2, right: 1 };
-  ['left', 'top', 'right'].forEach(pos => {
+  ['left','top','right'].forEach(pos => {
     const p = getPlayerAtOffset(offsets[pos]);
     const sets = getTableSetsAtOffset(offsets[pos]);
     renderOpponentSlot(
@@ -360,13 +337,8 @@ function renderMyTableSets() {
 }
 
 function renderAll() {
-  renderHeader();
-  renderHand();
-  renderDiscardPile();
-  renderStockPile();
-  renderOpponents();
-  renderMyBadge();
-  renderMyTableSets();
+  renderHeader(); renderHand(); renderDiscardPile();
+  renderStockPile(); renderOpponents(); renderMyBadge(); renderMyTableSets();
 }
 
 function toggleCard(idx) {
@@ -427,77 +399,46 @@ function handleDhigo() {
   if (selected.length === 0) { showNotification('Fadlan dooro kaarka aad dhigayso!'); return; }
 
   if (isOpened && selected.length < 3) {
-    let allTableSets = [];
-    if (typeof tablePlayers !== 'undefined' && tablePlayers.length) {
-      allTableSets = tablePlayers.flatMap(p => p.openedSets || []);
-    } else {
-      allTableSets = [...myOpenedSets];
-    }
-
-    let validAdditions = [];
-    let invalidCards = [];
-
+    let allTableSets = tablePlayers.length ? tablePlayers.flatMap(p => p.openedSets || []) : [...myOpenedSets];
+    let validAdditions = [], invalidCards = [];
     selected.forEach(card => {
       let fitsInAnySet = false;
-
       allTableSets.forEach(set => {
         if (!set || set.length < 3) return;
-
         const isSequence = set[0].suit === set[1].suit;
         if (isSequence && card.suit === set[0].suit) {
           const sortedValues = set.map(c => getCardValue(c)).sort((a, b) => a - b);
-          const minVal = sortedValues[0];
-          const maxVal = sortedValues[sortedValues.length - 1];
           const myVal = getCardValue(card);
-
-          if (myVal === minVal - 1 || myVal === maxVal + 1) {
-            fitsInAnySet = true;
-          }
-        } 
-        else if (!isSequence && card.value === set[0].value) {
+          if (myVal === sortedValues[0] - 1 || myVal === sortedValues[sortedValues.length-1] + 1) fitsInAnySet = true;
+        } else if (!isSequence && card.value === set[0].value) {
           const alreadyHasSuit = set.some(c => c.suit === card.suit);
-          if (!alreadyHasSuit && set.length < 4) {
-            fitsInAnySet = true;
-          }
+          if (!alreadyHasSuit && set.length < 4) fitsInAnySet = true;
         }
       });
-
-      if (fitsInAnySet) {
-        validAdditions.push(card);
-      } else {
-        invalidCards.push(card);
-      }
+      if (fitsInAnySet) validAdditions.push(card); else invalidCards.push(card);
     });
-
-    if (invalidCards.length > 0) {
-      showNotification(`Kaarka ${invalidCards[0].value}${invalidCards[0].suit} kuma darsami karo kooxaha miiska saaran!`);
-      return;
-    }
-
+    if (invalidCards.length > 0) { showNotification(`Kaarka ${invalidCards[0].value}${invalidCards[0].suit} kuma darsami karo kooxaha miiska saaran!`); return; }
     if (validAdditions.length > 0) {
       const selectedIds = new Set(validAdditions.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
       socket.emit('addToExistingSets', { cards: validAdditions });
       socket.emit('syncHandAfterMeld', myHand);
       showNotification(`Waad ku darsatay miiska ${validAdditions.length} kaar!`);
-      renderAll();
-      return;
+      renderAll(); return;
     }
   }
 
   if (selected.length < 3) { showNotification('Dooro ugu yaraan 3 kaar oo koox ah!'); return; }
-  
   const { validGroups, remaining } = findValidGroups(selected);
   if (remaining.length > 0) { showNotification(`Kaarka ${remaining[0].value} ma geli karo koox!`); return; }
   const moveScore = selected.reduce((s, c) => s + cardPoints(c), 0);
-  
+
   if (!isOpened) {
     const currentTotal = temporaryScore + moveScore;
     const allSetsSoFar = [...myOpenedSets, ...validGroups];
     const hasFourPlus = allSetsSoFar.some(g => g.length >= 4);
     if (currentTotal >= currentMinToOpen && hasFourPlus) {
-      isOpened = true; iHaveOpened = true;
-      myOpenedSets = allSetsSoFar;
+      isOpened = true; iHaveOpened = true; myOpenedSets = allSetsSoFar;
       const selectedIds = new Set(selected.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
       socket.emit('meldSets', { sets: allSetsSoFar, totalScore: currentTotal });
@@ -505,14 +446,9 @@ function handleDhigo() {
       temporaryScore = 0;
       showNotification(`Waad degtay! ${currentTotal} dhibco. Qofka xiga: ${currentTotal + 1}`);
     } else {
-      if (!hasFourPlus) {
-        showNotification('Waxaad u baahan tahay ugu yaraan hal koox oo 4+ kaar ah!'); return;
-      }
-      if (currentTotal < currentMinToOpen) {
-        showNotification(`Ma degi kartid! U baahan: ${currentMinToOpen} dhibco.`); return;
-      }
-      temporaryScore += moveScore;
-      myOpenedSets = [...myOpenedSets, ...validGroups];
+      if (!hasFourPlus) { showNotification('Waxaad u baahan tahay ugu yaraan hal koox oo 4+ kaar ah!'); return; }
+      if (currentTotal < currentMinToOpen) { showNotification(`Ma degi kartid! U baahan: ${currentMinToOpen} dhibco.`); return; }
+      temporaryScore += moveScore; myOpenedSets = [...myOpenedSets, ...validGroups];
       const selectedIds = new Set(selected.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
       socket.emit('syncHandAfterMeld', myHand);
@@ -541,26 +477,23 @@ function handleReset() {
 
 function handleTuur() {
   if (!isMyTurn) { showNotification('Sug doorkaaga!'); return; }
-  if (myHand.length === 14 && !hasDrawn) { showNotification('Fadlan marka hore kaar qaado!'); return; }
-  
+  if (myHand.length <= 14 && !hasDrawn) {
+    showNotification('Fadlan marka hore kaar qaado!'); return;
+  }
   if (pickedFromDiscard && !isOpened) {
     const score = myHand.filter(c => c.selected).reduce((s, c) => s + cardPoints(c), 0);
     if (score < 101) { showNotification('Maadaama aad tuurista qaadatay, waa inaad degtaa (101)!'); return; }
     else { showNotification("Fadlan marka hore riix 'Dhigo' si aad u degto!"); return; }
   }
-  
   const selIdx = myHand.findIndex(c => c.selected);
   if (selIdx === -1) { showNotification('Dooro kaarka aad tuurayso!'); return; }
-  
   const cardToPlay = myHand[selIdx];
   const remaining = myHand.length - 1;
-
   let isBatuutoMove = false;
   if (isOpened && remaining === 2) {
     isBatuutoMove = true;
-    showNotification('🚨 Waxaad gashay Batuuto! Kaararkaaga waxaa lagu celinayaa Madafaca.', 5000);
+    showNotification('🚨 Waxaad gashay Batuuto! Kaararkaaga waxaa laku celinayaa Madafaca.', 5000);
   }
-
   const discardEl = $('discard-display');
   if (discardEl) {
     discardEl.classList.remove('card-throw-anim');
@@ -568,20 +501,14 @@ function handleTuur() {
     discardEl.classList.add('card-throw-anim');
     discardEl.addEventListener('animationend', () => discardEl.classList.remove('card-throw-anim'), { once: true });
   }
-
   socket.emit('playCard', { card: cardToPlay, isBatuuto: isBatuutoMove });
   myHand.splice(selIdx, 1);
-  
-  if (isBatuutoMove) {
-    myHand = [];
-    isOpened = false;
-    myOpenedSets = [];
-  }
-
-  isMyTurn = false; 
-  hasDrawn = false; 
+  if (isBatuutoMove) { myHand = []; isOpened = false; myOpenedSets = []; }
+  isMyTurn = false;
+  hasDrawn = false;
   pickedFromDiscard = false;
   clearInterval(turnTimerInterval);
+  myHand.forEach(c => c.selected = false);
   renderAll();
 }
 
@@ -595,11 +522,7 @@ function startWaitingCountdown() {
   waitingAutoTimer = setInterval(() => {
     waitingCountdown--;
     if (noteEl) noteEl.textContent = `(Robotyadu si toos ah ayay ku biiraan ${waitingCountdown}s)`;
-    if (waitingCountdown <= 0) {
-      clearInterval(waitingAutoTimer);
-      waitingAutoTimer = null;
-      if (noteEl) noteEl.textContent = 'Robotyada la keenayaa...';
-    }
+    if (waitingCountdown <= 0) { clearInterval(waitingAutoTimer); waitingAutoTimer = null; if (noteEl) noteEl.textContent = 'Robotyada la keenayaa...'; }
   }, 1000);
 }
 
@@ -637,9 +560,13 @@ function joinGame() {
   const name = nameInput ? nameInput.value.trim() : '';
   if (!name) { showNotification('Fadlan geli magacaaga!'); return; }
   myName = name;
+  inGame = false;
+  // Always clear any old token — joining from the start screen is always a fresh game.
+  // Reconnect (with token) only happens automatically when the socket drops mid-game.
+  sessionStorage.removeItem(SESSION_KEY);
   showScreen('waiting');
   renderWaitingRoom([]);
-  socket.emit('joinRandom', name);
+  socket.emit('joinRandom', { name, token: null });
   startWaitingCountdown();
   setTimeout(() => {
     typeWriter('waiting-typewriter', `${name}, soo dhowoow! Dulqaado fadlan inta ay ciyaartooyda kale ku soo biirayaan...`, 48);
@@ -651,15 +578,12 @@ function typeWriter(elementId, text, speed = 45) {
   if (!el) return;
   el.textContent = '';
   let i = 0;
-  function type() {
-    if (i < text.length) { el.textContent += text.charAt(i); i++; setTimeout(type, speed); }
-  }
+  function type() { if (i < text.length) { el.textContent += text.charAt(i); i++; setTimeout(type, speed); } }
   type();
 }
 
 function showReconnectOverlay(msg) {
-  const overlay = $('reconnect-overlay');
-  const msgEl = $('reconnect-msg');
+  const overlay = $('reconnect-overlay'), msgEl = $('reconnect-msg');
   if (overlay) overlay.classList.remove('hidden');
   if (msgEl) msgEl.textContent = msg || 'Dib u xidh...';
 }
@@ -672,22 +596,33 @@ function hideReconnectOverlay() {
 function initSocket() {
   socket = io({ path: '/game-io', transports: ['polling', 'websocket'] });
   socket.on('disconnect', () => showReconnectOverlay('Xiriirka waa go\'ay — Dib u xidh...'));
-  socket.on('connect', () => { hideReconnectOverlay(); if (myName) socket.emit('request_sync'); });
+  socket.on('connect', () => {
+    hideReconnectOverlay();
+    // Auto-reconnect only when socket drops while user is already inside a game.
+    // (inGame is false when on the start/waiting screen, so no stale reconnect.)
+    if (inGame && myName) {
+      const storedToken = sessionStorage.getItem(SESSION_KEY);
+      if (storedToken) {
+        socket.emit('joinRandom', { name: myName, token: storedToken });
+      }
+    }
+  });
   socket.on('connect_error', () => showReconnectOverlay('Serverka lama gaari karo — Sugaya...'));
 
-  socket.on('waitingRoomUpdate', data => {
-    renderWaitingRoom(data.players);
+  // ── FIX: store session token from server in sessionStorage
+  socket.on('sessionToken', token => {
+    if (token) sessionStorage.setItem(SESSION_KEY, token);
   });
+
+  socket.on('waitingRoomUpdate', data => renderWaitingRoom(data.players));
 
   socket.on('startHand', hand => {
     stopWaitingCountdown();
+    inGame = true;
     myHand = hand.map(c => ({ ...c, selected: false }));
     showScreen('game');
     renderHeader(); renderDiscardPile(); renderStockPile(); renderMyBadge(); renderMyTableSets();
-    ['left', 'top', 'right'].forEach(pos => {
-      const cardsEl = $(`cards-${pos}`);
-      if (cardsEl) cardsEl.innerHTML = '';
-    });
+    ['left','top','right'].forEach(pos => { const c = $(`cards-${pos}`); if (c) c.innerHTML = ''; });
     const opponentCounts = { left: 14, top: 14, right: 14 };
     setTimeout(() => distributeAllCardsAnimated(myHand, opponentCounts, () => renderOpponents()), 150);
   });
@@ -736,14 +671,21 @@ function initSocket() {
   });
 
   socket.on('discardReturnedSuccess', () => {
-    pickedFromDiscard = false;
-    hasDrawn = false;
+    pickedFromDiscard = false; hasDrawn = false;
     showNotification('Kaarkii tuurista ayaad ku soo celisay. Hadda kaar qaado ama tuurista ka qaado.', 3000);
     renderAll();
   });
 
   socket.on('autoDiscarded', card => {
-    showNotification(`Waqtigii dhamaday — ${card.value}${card.suit} ayaa si toos ah loo tuuray`, 3000);
+    isMyTurn = false; hasDrawn = false; pickedFromDiscard = false;
+    clearInterval(turnTimerInterval);
+    if (card && card.id) {
+      const idx = myHand.findIndex(c => c.id === card.id);
+      if (idx !== -1) myHand.splice(idx, 1);
+    }
+    myHand.forEach(c => c.selected = false);
+    showNotification(`Waqtigii wuu kaa dhamaday — ${card.value}${card.suit} ayaa si toos ah loo tuuray`, 3000);
+    renderAll();
   });
 
   socket.on('updateTableUI', data => {
@@ -759,7 +701,9 @@ function initSocket() {
 
   socket.on('gameOver', data => {
     clearInterval(turnTimerInterval);
-
+    inGame = false;
+    // Clear session token so next game starts fresh
+    sessionStorage.removeItem(SESSION_KEY);
     if (data.winnerId === socket.id) {
       const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
       if (fooroTarget && !fooroTarget.isBot) {
@@ -767,22 +711,19 @@ function initSocket() {
         showNotification(`FOORO! ${fooroTarget.name} ayaa 101 dhibco helay!`, 6000);
       }
     }
-
     const modal = $('gameover-modal');
     if (modal) modal.classList.remove('hidden');
-
     if (data.winnerId === socket.id) {
       const icon = $('modal-icon'); if (icon) icon.textContent = '🏆';
       const title = $('modal-title'); if (title) title.textContent = 'WAAD GUULEYSATAY!';
       const body = $('modal-body'); if (body) body.textContent = `Hambalyo, ${myName}!`;
     } else {
       const localWinner = players.find(p => p.id === data.winnerId);
-      const isBot = (localWinner && localWinner.isBot) || 
+      const isBot = (localWinner && localWinner.isBot) ||
                     (data.winnerName && (data.winnerName.includes('JIMCAALE') || data.winnerName.includes('FAARAX')));
-      const icon = $('modal-icon'); 
-      if (icon) icon.textContent = isBot ? '🤖' : '🃏';
+      const icon = $('modal-icon'); if (icon) icon.textContent = isBot ? '🤖' : '🃏';
       const title = $('modal-title'); if (title) title.textContent = 'CIYAARTU WAA DHAMMAATAY';
-      const body = $('modal-body'); if (body) body.innerHTML = `<span style="color:#2ecc71;font-weight:700">${data.winnerName}</span> ayaa guuleystay!`;
+      const body = $('modal-body'); if (body) body.innerHTML = `<span style="color:#2ecc71;font-weight:700">${data.winnerName}</span> baa guuleystay!`;
     }
   });
 
@@ -799,20 +740,14 @@ function initSocket() {
     showNotification(data.message, 6000);
     const btn = $('btn-pause');
     if (btn && data.activePlayerId === socket.id) {
-      btn.textContent = 'Fasax';
-      btn.dataset.paused = 'true';
-      btn.style.background = '#f39c12';
+      btn.textContent = 'Fasax'; btn.dataset.paused = 'true'; btn.style.background = '#f39c12';
     }
   });
 
   socket.on('timerResumed', () => {
     showNotification('Waqtiga dib ayuu bilaabmay!', 2000);
     const btn = $('btn-pause');
-    if (btn) {
-      btn.textContent = 'Isuga';
-      btn.dataset.paused = 'false';
-      btn.style.background = '';
-    }
+    if (btn) { btn.textContent = 'Isuga'; btn.dataset.paused = 'false'; btn.style.background = ''; }
     if (isMyTurn) startTurnTimer();
   });
 
@@ -820,31 +755,26 @@ function initSocket() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible' && socket) socket.emit('request_sync');
+  if (document.visibilityState === 'visible' && socket && inGame) {
+    socket.emit('request_sync');
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   const joinBtn = $('join-btn');
   if (joinBtn) joinBtn.addEventListener('click', joinGame);
-
   const nameInput = $('name-input');
   if (nameInput) nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') joinGame(); });
-
   const btnDraw = $('btn-draw');
   if (btnDraw) btnDraw.addEventListener('click', handleDraw);
-
   const btnPickDiscard = $('btn-pick-discard');
   if (btnPickDiscard) btnPickDiscard.addEventListener('click', handlePickDiscard);
-
   const btnDhigo = $('btn-dhigo');
   if (btnDhigo) btnDhigo.addEventListener('click', handleDhigo);
-
   const btnReset = $('btn-reset');
   if (btnReset) btnReset.addEventListener('click', handleReset);
-
   const btnSort = $('btn-sort');
   if (btnSort) btnSort.addEventListener('click', handleSort);
-
   const btnTuur = $('btn-tuur');
   if (btnTuur) btnTuur.addEventListener('click', handleTuur);
 
@@ -863,22 +793,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnPause) {
     btnPause.addEventListener('click', () => {
       if (!isMyTurn) return;
-      if (pickedFromDiscard && !isOpened) {
-        socket.emit('returnDiscardCard');
-        return;
-      }
+      if (pickedFromDiscard && !isOpened) { socket.emit('returnDiscardCard'); return; }
       const isPaused = btnPause.dataset.paused === 'true';
       if (!isPaused) {
-        socket.emit('pauseTimer');
-        btnPause.textContent = 'Fasax';
-        btnPause.dataset.paused = 'true';
-        btnPause.style.background = '#f39c12';
+        socket.emit('pauseTimer'); btnPause.textContent = 'Fasax';
+        btnPause.dataset.paused = 'true'; btnPause.style.background = '#f39c12';
         clearInterval(turnTimerInterval);
       } else {
-        socket.emit('resumeTimer');
-        btnPause.textContent = 'Isuga';
-        btnPause.dataset.paused = 'false';
-        btnPause.style.background = '';
+        socket.emit('resumeTimer'); btnPause.textContent = 'Isuga';
+        btnPause.dataset.paused = 'false'; btnPause.style.background = '';
       }
     });
   }

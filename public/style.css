@@ -105,182 +105,52 @@ body {
     z-index: 100;
     gap: 5px;
 }
-.slot-top {
-    top: 12%;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-.slot-left {
-    left: 17% !important;
-    flex-direction: row-reverse !important;
-    top: 50%;
-    transform: translateY(-50%);
-}
-.slot-right {
-    right: 17% !important;
-    flex-direction: row !important;
-    top: 50%;
-    transform: translateY(-50%);
-}
+.slot-top { top: 12%; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.slot-left { left: 17% !important; flex-direction: row-reverse !important; top: 50%; transform: translateY(-50%); }
+.slot-right { right: 17% !important; flex-direction: row !important; top: 50%; transform: translateY(-50%); }
 .player-badge {
-    position: relative;
-    z-index: 101;
-    background-color: rgba(0, 0, 0, 0.7) !important;
-    padding: 4px 14px;
-    border-radius: 999px;
-    border: 2px solid var(--gold);
-    color: var(--gold);
-    font-weight: 700;
-    font-size: .75rem;
-    white-space: nowrap;
-    transition: all .3s;
+    position: relative; z-index: 101;
+    background-color: rgba(0,0,0,0.7) !important;
+    padding: 4px 14px; border-radius: 999px;
+    border: 2px solid var(--gold); color: var(--gold);
+    font-weight: 700; font-size: .75rem; white-space: nowrap; transition: all .3s;
 }
-.slot-left, .slot-right {
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 10px;
-}
+.slot-left, .slot-right { display: flex !important; flex-direction: row !important; align-items: center !important; gap: 10px; }
 .slot-left .player-badge {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    max-height: 120px;
-    overflow: hidden;
-    min-width: unset;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    order: 1;
-    font-size: clamp(0.4rem, 1.2vw, 0.55rem);
-    padding: 6px 4px;
-    border-radius: 8px;
-    border: 1px solid var(--gold);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: var(--gold);
-    font-weight: 700;
-    white-space: nowrap;
-    position: relative;
-    z-index: 101;
+    writing-mode: vertical-rl; text-orientation: mixed; max-height: 120px; overflow: hidden;
+    min-width: unset; display: flex; align-items: center; justify-content: center; order: 1;
+    font-size: clamp(0.4rem,1.2vw,0.55rem); padding: 6px 4px; border-radius: 8px;
+    border: 1px solid var(--gold); background-color: rgba(0,0,0,0.7); color: var(--gold);
+    font-weight: 700; white-space: nowrap; position: relative; z-index: 101;
 }
-
 .slot-right .player-badge {
-    writing-mode: vertical-rl;
-    text-orientation: mixed;
-    max-height: 120px;
-    overflow: hidden;
-    min-width: unset;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    order: 2;
-    font-size: clamp(0.4rem, 1.2vw, 0.55rem);
-    padding: 6px 4px;
-    border-radius: 8px;
-    border: 1px solid var(--gold);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: var(--gold);
-    font-weight: 700;
-    white-space: nowrap;
-    position: relative;
-    z-index: 101;
+    writing-mode: vertical-rl; text-orientation: mixed; max-height: 120px; overflow: hidden;
+    min-width: unset; display: flex; align-items: center; justify-content: center; order: 2;
+    font-size: clamp(0.4rem,1.2vw,0.55rem); padding: 6px 4px; border-radius: 8px;
+    border: 1px solid var(--gold); background-color: rgba(0,0,0,0.7); color: var(--gold);
+    font-weight: 700; white-space: nowrap; position: relative; z-index: 101;
 }
 .player-badge.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 12px rgba(46,204,113,.6); animation: pulse 1.2s infinite; }
-.opponent-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0 !important;
-}
-.opponent-cards .card-back-sm {
-    margin-bottom: -44px !important;
-    margin-right: 0 !important;
-}
-.opponent-cards .card-back-sm:last-child {
-    margin-bottom: 0 !important;
-}
-.slot-left .opponent-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0 !important;
-    order: 2;
-}
-.slot-right .opponent-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0 !important;
-    order: 1;
-}
-.slot-left .card-back-sm {
-    margin-bottom: -54px !important;
-    margin-right: 0 !important;
-}
-.slot-left .card-back-sm:last-child {
-    margin-bottom: 0 !important;
-}
-.slot-right .card-back-sm {
-    margin-bottom: -54px !important;
-    margin-right: 0 !important;
-}
-.slot-right .card-back-sm:last-child {
-    margin-bottom: 0 !important;
-}
-.slot-top .opponent-cards {
-    flex-direction: row !important;
-    gap: 0;
-}
-.slot-top .card-back-sm {
-   margin-right: -24px !important;
-    margin-bottom: 0 !important;
-}
-.slot-top .card-back-sm:last-child {
-    margin-right: 0;
-}
-.piles-center {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    display: flex;
-    gap: 40px;
-    z-index: 50;
-}
-.pile-wrap {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-}
+.opponent-cards { display: flex !important; flex-direction: column !important; gap: 0 !important; }
+.opponent-cards .card-back-sm { margin-bottom: -44px !important; margin-right: 0 !important; }
+.opponent-cards .card-back-sm:last-child { margin-bottom: 0 !important; }
+.slot-left .opponent-cards { display: flex !important; flex-direction: column !important; gap: 0 !important; order: 2; }
+.slot-right .opponent-cards { display: flex !important; flex-direction: column !important; gap: 0 !important; order: 1; }
+.slot-left .card-back-sm { margin-bottom: -54px !important; margin-right: 0 !important; }
+.slot-left .card-back-sm:last-child { margin-bottom: 0 !important; }
+.slot-right .card-back-sm { margin-bottom: -54px !important; margin-right: 0 !important; }
+.slot-right .card-back-sm:last-child { margin-bottom: 0 !important; }
+.slot-top .opponent-cards { flex-direction: row !important; gap: 0; }
+.slot-top .card-back-sm { margin-right: -24px !important; margin-bottom: 0 !important; }
+.slot-top .card-back-sm:last-child { margin-right: 0; }
+.piles-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: flex; gap: 40px; z-index: 50; }
+.pile-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .pile-btn { background: none; border: none; cursor: pointer; padding: 0; }
-.pile-label {
-    color: var(--gold);
-    font-size: 0.75rem;
-    font-weight: 800;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-    margin-top: 5px;
-}
-.card-back-lg {
-    width: 80px; height: 112px;
-    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);
-    border: 3px solid #ffd700;
-    border-radius: 12px;
-    box-shadow: 2px 2px 8px rgba(0,0,0,.5);
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.card-back-lg::after {
-    content: '★';
-    font-size: 2rem;
-    color: rgba(255,215,0,0.6);
-}
+.pile-label { color: var(--gold); font-size: 0.75rem; font-weight: 800; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); margin-top: 5px; }
+.card-back-lg { width: 80px; height: 112px; background: linear-gradient(135deg,#1a237e 0%,#283593 50%,#1a237e 100%); border: 3px solid #ffd700; border-radius: 12px; box-shadow: 2px 2px 8px rgba(0,0,0,.5); position: relative; display: flex; align-items: center; justify-content: center; }
+.card-back-lg::after { content: '★'; font-size: 2rem; color: rgba(255,215,0,0.6); }
 .card-back-inner { display: none; }
-.stock-count {
-  position: absolute; color: #ffd700; font-weight: 900; font-size: 1.5rem;
-  text-shadow: 0 0 8px rgba(0,0,0,.8); pointer-events: none; z-index: 10;
-}
+.stock-count { position: absolute; color: #ffd700; font-weight: 900; font-size: 1.5rem; text-shadow: 0 0 8px rgba(0,0,0,.8); pointer-events: none; z-index: 10; }
 #btn-draw:hover .card-back-lg { border-color: var(--gold); box-shadow: 0 0 14px rgba(241,196,15,.5); }
 #btn-draw:active .card-back-lg { transform: scale(0.96); }
 .discard-empty { width: 80px; height: 112px; border: 2px dashed rgba(255,255,255,.25); border-radius: 12px; background: rgba(0,0,0,.2); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,.25); font-size: .75rem; }
@@ -310,38 +180,8 @@ body {
 .card.lg .cv-bot { font-size: 14px; }
 .card.overlap { margin-left: -16px; }
 .card.overlap:first-child { margin-left: 0; }
-.card-back-sm {
-    width: 46px; 
-    height: 64px;
-    background: radial-gradient(circle, #243b55 0%, #141e30 100%) !important;
-    border: 1.5px solid var(--gold) !important;
-    border-radius: 6px;
-    flex-shrink: 0;
-    box-shadow: 1px 1px 4px rgba(0,0,0,.6);
-    position: relative;
-    display: block !important; /* Hubi inaan loo qarin display:none */
-}
-.card-back-sm::after {
-    content: '★';
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 1.2rem;
-    color: rgba(241, 196, 15, 0.3);
-}
-.card-back {
-    width: 60px;
-    height: 90px;
-    background-image: url('/cards/back.png');
-    background-size: cover;
-    border-radius: 6px;
-    box-shadow: 2px 2px 10px rgba(0,0,0,0.5);
-    position: absolute;
-    transition: all 0.5s ease-in-out;
-    z-index: 100;
-}
-
+.card-back-sm { width: 46px; height: 64px; background: radial-gradient(circle,#243b55 0%,#141e30 100%) !important; border: 1.5px solid var(--gold) !important; border-radius: 6px; flex-shrink: 0; box-shadow: 1px 1px 4px rgba(0,0,0,.6); position: relative; display: block !important; }
+.card-back-sm::after { content: '★'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 1.2rem; color: rgba(241,196,15,0.3); }
 #hand-area { flex-shrink: 0; background: rgba(0,0,0,.9); border-top: 2px solid rgba(241,196,15,.3); padding: 12px 12px 32px; }
 .hand-cards { display: flex; align-items: flex-end; justify-content: center; gap: 4px; min-height: 110px; flex-wrap: wrap; margin-bottom: 12px; }
 .controls-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
@@ -371,483 +211,75 @@ body {
 .bold { font-weight: 700; }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.5; } }
 @keyframes slideDown { from { transform: translateX(-50%) translateY(-10px); opacity:0; } to { transform: translateX(-50%) translateY(0); opacity:1; } }
-.waiting-typewriter {
-  color: rgba(255,255,255,.55); font-size: .85rem; text-align: center;
-  margin-top: 12px; min-height: 2.4em; line-height: 1.5;
-  border-right: 2px solid var(--gold);
-  white-space: pre-wrap; word-break: break-word;
-  animation: blink-cursor .75s step-end infinite;
-}
+.waiting-typewriter { color: rgba(255,255,255,.55); font-size: .85rem; text-align: center; margin-top: 12px; min-height: 2.4em; line-height: 1.5; border-right: 2px solid var(--gold); white-space: pre-wrap; word-break: break-word; animation: blink-cursor .75s step-end infinite; }
 .waiting-typewriter.done { border-right-color: transparent; animation: none; }
 @keyframes blink-cursor { 0%,100% { border-color: var(--gold); } 50% { border-color: transparent; } }
-#waiting-screen {
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
-  overflow-y: auto;
-}
-.card-deal {
-    position: absolute !important;
-    left: 50%;
-    top: 50%;
-    width: 46px;
-    height: 64px;
-    margin-left: -23px;
-    margin-top: -32px;
-    z-index: 99999;
-    pointer-events: none;
-    animation: flyIn 0.5s ease-out forwards;
-    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #1a237e 100%);
-    border: 2px solid #ffd700;
-    border-radius: 8px;
-    box-shadow: 0 4px 16px rgba(0,0,0,0.6);
-}
-@keyframes flyIn {
-    0%   { transform: translate(0, 0) scale(0.15); opacity: 0; }
-    100% { transform: translate(var(--targetX), var(--targetY)) scale(1); opacity: 1; }
-}
-@keyframes cardPickup {
-    0%   { transform: scale(1) translateY(0); }
-    50%  { transform: scale(1.12) translateY(-6px); box-shadow: 0 0 22px rgba(241,196,15,.85); }
-    100% { transform: scale(1) translateY(0); }
-}
-@keyframes cardThrow {
-    0%   { box-shadow: 2px 2px 8px rgba(0,0,0,.5); }
-    40%  { box-shadow: 0 0 28px rgba(231,76,60,.9); }
-    100% { box-shadow: 2px 2px 8px rgba(0,0,0,.5); }
-}
+#waiting-screen { justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
+.card-deal { position: absolute !important; left: 50%; top: 50%; width: 46px; height: 64px; margin-left: -23px; margin-top: -32px; z-index: 99999; pointer-events: none; animation: flyIn 0.5s ease-out forwards; background: linear-gradient(135deg,#1a237e 0%,#283593 50%,#1a237e 100%); border: 2px solid #ffd700; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.6); }
+@keyframes flyIn { 0% { transform: translate(0,0) scale(0.15); opacity:0; } 100% { transform: translate(var(--targetX),var(--targetY)) scale(1); opacity:1; } }
+@keyframes cardPickup { 0% { transform: scale(1) translateY(0); } 50% { transform: scale(1.12) translateY(-6px); box-shadow: 0 0 22px rgba(241,196,15,.85); } 100% { transform: scale(1) translateY(0); } }
+@keyframes cardThrow { 0% { box-shadow: 2px 2px 8px rgba(0,0,0,.5); } 40% { box-shadow: 0 0 28px rgba(231,76,60,.9); } 100% { box-shadow: 2px 2px 8px rgba(0,0,0,.5); } }
 .card-pickup-anim { animation: cardPickup 0.35s ease; }
 .card-throw-anim  { animation: cardThrow 0.35s ease; }
-.waiting-bot-section {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  margin-top: 4px;
-}
-.waiting-divider {
-  color: #555;
-  font-size: .85rem;
-  letter-spacing: .1em;
-  position: relative;
-  width: 100%;
-  text-align: center;
-}
-.waiting-divider::before, .waiting-divider::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  width: 42%;
-  height: 1px;
-  background: #333;
-}
+.waiting-bot-section { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 4px; }
+.waiting-divider { color: #555; font-size: .85rem; letter-spacing: .1em; position: relative; width: 100%; text-align: center; }
+.waiting-divider::before, .waiting-divider::after { content: ''; position: absolute; top: 50%; width: 42%; height: 1px; background: #333; }
 .waiting-divider::before { left: 0; }
-.waiting-divider::after  { right: 0; }
-.btn-bots {
-  width: 100%;
-  padding: 14px;
-  background: #1a3a5c;
-  color: #fff;
-  font-weight: 700;
-  font-size: .95rem;
-  border: 2px solid #2980b9;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: background .2s, box-shadow .2s;
-  letter-spacing: .05em;
-}
-.btn-bots:hover    { background: #2980b9; box-shadow: 0 0 16px rgba(41,128,185,.4); }
+.waiting-divider::after { right: 0; }
+.btn-bots { width: 100%; padding: 14px; background: #1a3a5c; color: #fff; font-weight: 700; font-size: .95rem; border: 2px solid #2980b9; border-radius: 14px; cursor: pointer; transition: background .2s, box-shadow .2s; letter-spacing: .05em; }
+.btn-bots:hover { background: #2980b9; box-shadow: 0 0 16px rgba(41,128,185,.4); }
 .btn-bots:disabled { opacity: .5; cursor: not-allowed; }
-.waiting-bot-note {
-  color: #555;
-  font-size: .8rem;
-  text-align: center;
-}
-.waiting-auto-note {
-  color: rgba(241,196,15,.6);
-  font-size: .8rem;
-  text-align: center;
-  min-height: 1.2em;
-}
-.waiting-bot {
-  background: rgba(41,128,185,.1) !important;
-  border-left-color: #2980b9 !important;
-}
-.bot-label {
-  margin-left: auto;
-  color: #2980b9;
-  font-size: .85rem;
-  font-weight: 600;
-}
+.waiting-bot-note { color: #555; font-size: .8rem; text-align: center; }
+.waiting-auto-note { color: rgba(241,196,15,.6); font-size: .8rem; text-align: center; min-height: 1.2em; }
+.waiting-bot { background: rgba(41,128,185,.1) !important; border-left-color: #2980b9 !important; }
+.bot-label { margin-left: auto; color: #2980b9; font-size: .85rem; font-weight: 600; }
 
-
-/* ======================== MOBILE OPTIMIZATION (MEDIA QUERY) ======================== */
 @media (max-width: 768px) {
-  /* ROOT */
-  html, body {
-    width: 100%; height: 100%;
-    margin: 0; padding: 0;
-    background: #061114;
-    overflow: hidden !important;
-    overscroll-behavior: none;
-    touch-action: manipulation;
-    position: fixed;
-  }
-  
-  /* ── HAND AREA: HALKAN BAAN KA SAARNAY DISPLAY: NONE SI AY U SOO MUUQATO ── */
-  #hand-area {
-    /* display: none !important;  <-- Kan baa qarinayey badhamada, waan ka saarnay! */
-  }
-  
-  /* ── FOOTER: DIB U QARI KAN (MAAHA BADHAMADA CIYAARTA) ─────────────────────── */
-  #game-screen .footer-game {
-    display: none !important;
-  }
-  
-  /* ── GAME SCREEN ────────────────────────────────────────────── */
-  #game-screen.active {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    height: 100dvh !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-    padding-top: env(safe-area-inset-top, 0) !important;
-  }
-  
-  /* ── HEADER ─────────────────────────────────────────────────── */
-  #game-screen.active #game-header {
-    position: relative !important;
-    z-index: 200 !important;
-    height: 34px !important;
-    min-height: 34px !important;
-    flex-shrink: 0 !important;
-    padding: 4px 8px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-    gap: 6px !important;
-  }
-  #game-screen.active #hdr-name {
-    font-size: .72rem !important; max-width: 70px !important;
-    overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important;
-  }
-  #game-screen.active #hdr-turn  { flex: 1 !important; text-align: center !important; font-size: .6rem !important; }
+  html, body { width: 100%; height: 100%; margin: 0; padding: 0; background: #061114; overflow: hidden !important; overscroll-behavior: none; touch-action: manipulation; position: fixed; }
+  #game-screen .footer-game { display: none !important; }
+  #game-screen.active { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; height: 100dvh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; box-sizing: border-box !important; padding-top: env(safe-area-inset-top,0) !important; }
+  #game-screen.active #game-header { position: relative !important; z-index: 200 !important; height: 34px !important; min-height: 34px !important; flex-shrink: 0 !important; padding: 4px 8px !important; display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 6px !important; }
+  #game-screen.active #hdr-name { font-size: .72rem !important; max-width: 70px !important; overflow: hidden !important; text-overflow: ellipsis !important; white-space: nowrap !important; }
+  #game-screen.active #hdr-turn { flex: 1 !important; text-align: center !important; font-size: .6rem !important; }
   #game-screen.active #hdr-score { font-size: .7rem !important; }
-  #game-screen.active #btn-exit  { font-size: .64rem !important; padding: 2px 7px !important; }
-  
-  /* ── TABLE AREA ──────────────────────────────────────────────── */
-  #game-screen.active #table-area {
-    position: relative !important;
-    flex: 1 1 auto !important;
-    min-height: 0 !important;
-    width: 100% !important;
-    overflow: visible !important; 
-    padding-bottom: 125px !important; /* Boos deeqsinimo leh oo loo daayey sets-ka */
-    box-sizing: border-box !important;
-  }
-  
-  /* ── FELT OVAL: MIISKA CAGAARAN ── */
-  #game-screen.active .felt-oval {
-    position: absolute !important;
-    /* wax yar kor */
-    top: 36% !important;
-    left: 50% !important;
-    transform: translate(-50%, -50%) !important;
-    /* dhinacyaha wax yar ballaari */
-    width: 97% !important;
-    /* kor iyo hoos si siman u dheeree */
-    height: 52% !important;
-    max-width: 410px !important;
-    max-height: 290px !important;
-    border-width: 4px !important;
-    /* oval-ka sii qurxi */
-    border-radius: 110px !important;
-    z-index: 1 !important;
-  }
-  
-  /* ── SMALL CARDS ────────────────────────────────────────────── */
-  #game-screen.active .card-back-sm,
-  #game-screen.active .slot-top .card-back-sm,
-  #game-screen.active .slot-left .card-back-sm,
-  #game-screen.active .slot-right .card-back-sm {
-    width: 28px !important; height: 40px !important;
-    min-width: 28px !important; min-height: 40px !important;
-    max-width: 28px !important; max-height: 40px !important;
-    border-radius: 4px !important; flex-shrink: 0 !important;
-  }
+  #game-screen.active #btn-exit { font-size: .64rem !important; padding: 2px 7px !important; }
+  #game-screen.active #table-area { position: relative !important; flex: 1 1 auto !important; min-height: 0 !important; width: 100% !important; overflow: visible !important; padding-bottom: 125px !important; box-sizing: border-box !important; }
+  #game-screen.active .felt-oval { position: absolute !important; top: 36% !important; left: 50% !important; transform: translate(-50%,-50%) !important; width: 97% !important; height: 52% !important; max-width: 410px !important; max-height: 290px !important; border-width: 4px !important; border-radius: 110px !important; z-index: 1 !important; }
+  #game-screen.active .card-back-sm, #game-screen.active .slot-top .card-back-sm, #game-screen.active .slot-left .card-back-sm, #game-screen.active .slot-right .card-back-sm { width: 28px !important; height: 40px !important; min-width: 28px !important; min-height: 40px !important; max-width: 28px !important; max-height: 40px !important; border-radius: 4px !important; flex-shrink: 0 !important; }
   #game-screen.active .card-back-sm::after { font-size: .8rem !important; }
-  
-  /* ── TOP PLAYER ─────────────────────────────────────────────── */
-  #game-screen.active .slot-top {
-    position: absolute !important;
-    top: 4% !important; left: 50% !important;
-    transform: translateX(-50%) !important;
-    display: flex !important; flex-direction: column !important;
-    align-items: center !important; z-index: 60 !important;
-  }
+  #game-screen.active .slot-top { position: absolute !important; top: 4% !important; left: 50% !important; transform: translateX(-50%) !important; display: flex !important; flex-direction: column !important; align-items: center !important; z-index: 60 !important; }
   #game-screen.active .slot-top .player-badge { font-size: .55rem !important; padding: 2px 7px !important; margin-bottom: 2px !important; }
   #game-screen.active .slot-top .opponent-cards { display: flex !important; flex-direction: row !important; justify-content: center !important; }
   #game-screen.active .slot-top .opponent-cards .card-back-sm { margin-right: -22px !important; }
   #game-screen.active .slot-top .opponent-cards .card-back-sm:last-child { margin-right: 0 !important; }
-  
-  /* ── LEFT PLAYER (FAARAX): MAGACA BANAANKA XIGO, TURUBKA GUDAHA ── */
-  #game-screen.active .slot-left {
-    position: absolute !important;
-    left: 4px !important;
-    top: 34% !important;
-    transform: translateY(-50%) !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 3px !important;
-    z-index: 60 !important;
-    width: auto !important;
-  }
-  #game-screen.active .slot-left .player-badge {
-    writing-mode: vertical-lr !important;
-    transform: rotate(180deg) !important;
-    font-size: .40rem !important;
-    flex-shrink: 0 !important;
-    order: 1 !important;
-    width: 16px !important;
-    min-height: 65px !important;
-    max-height: 80px !important;
-    overflow: hidden !important;
-    border-radius: 50px !important;
-    padding: 8px 0 !important;
-    box-sizing: border-box !important;
-    white-space: nowrap !important;
-    background: #0d1e24 !important;
-    border: 1px solid #d4a017 !important;
-    color: #fff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px !important;
-    letter-spacing: 0px !important;
-}
-  #game-screen.active .slot-left .opponent-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 0 !important;
-    /* TURUBKA GUDAHA */
-    order: 2 !important;
-  }
-  #game-screen.active .slot-left .opponent-cards .card-back-sm {
-    margin-bottom: -34px !important;
-    margin-right: 0 !important;
-  }
-  #game-screen.active .slot-left .opponent-cards .card-back-sm:last-child {
-    margin-bottom: 0 !important;
-  }
-  
-  /* ── RIGHT PLAYER (JAAMAC): MAGACA BANAANKA XIGO, TURUBKA GUDAHA ── */
-  #game-screen.active .slot-right {
-    position: absolute !important;
-    right: 4px !important;
-    top: 34% !important;
-    transform: translateY(-50%) !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 3px !important;
-    z-index: 60 !important;
-    width: auto !important;
-  }
-  #game-screen.active .slot-right .player-badge {
-    writing-mode: vertical-lr !important;
-    transform: rotate(180deg) !important;
-    font-size: .40rem !important;
-    flex-shrink: 0 !important;
-    order: 2 !important;
-    width: 16px !important;
-    min-height: 65px !important;
-    max-height: 80px !important;
-    overflow: hidden !important;
-    border-radius: 50px !important;
-    padding: 8px 0 !important;
-    box-sizing: border-box !important;
-    white-space: nowrap !important;
-    background: #0d1e24 !important;
-    border: 1px solid #d4a017 !important;
-    color: #fff !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px !important;
-    letter-spacing: 0px !important;
-}
-  #game-screen.active .slot-right .opponent-cards {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    gap: 0 !important;
-    /* TURUBKA GUDAHA */
-    order: 1 !important;
-  }
-  #game-screen.active .slot-right .opponent-cards .card-back-sm {
-    margin-bottom: -34px !important;
-    margin-right: 0 !important;
-  }
-  #game-screen.active .slot-right .opponent-cards .card-back-sm:last-child {
-    margin-bottom: 0 !important;
-  }
-  
-  /* ── CENTER PILES ────────────────────────────────────────────── */
-  #game-screen.active .piles-center {
-    position: absolute !important;
-    top: 34% !important;          
-    left: 50% !important;
-    transform: translate(-50%,-50%) !important;
-    display: flex !important; gap: 12px !important; z-index: 50 !important;
-  }
-  #game-screen.active .card-back-lg,
-  #game-screen.active .discard-empty,
-  #game-screen.active .piles-center .card.lg {
-    width: 44px !important; height: 62px !important; border-radius: 7px !important;
-  }
-  
-  /* ── CABBIRKA KAARARKA LA DHIGO OO LA YAREEYEY (SIDA JAAMAC) ── */
-  #game-screen.active .player-sets .card,
-  #game-screen.active .player-set .card,
-  #game-screen.active .my-table-sets .card,
-  #game-screen.active .card.md,
-  #game-screen.active [class*="set"] .card {
-    width: 25px !important;       
-    height: 36px !important;      
-    min-width: 25px !important;
-    min-height: 36px !important;
-    border-radius: 3px !important;
-    font-size: 7px !important;
-  }
-  #game-screen.active .my-table-sets .set-container,
-  #game-screen.active .player-set,
-  #game-screen.active .player-sets {
-    gap: 1px !important;
-  }
-  
-  /* ── MY SETS: BOOSKA KAAARARKA AAD DEGTAY ── */
-  #game-screen.active .my-table-sets {
-    position: absolute !important;
-    left: 50% !important;
-    bottom: 175px !important;     /* Kor baa loo qaaday si ay magaca iyo gacan-ku-haynta uga fogaadaan */
-    transform: translateX(-50%) !important;
-    max-width: 92% !important; 
-    z-index: 150 !important;
-  }
-
-  /* ── MY NAME BADGE: WUXUU HADDA FIXED KU DUL SABEYNAYAA GACANTA ── */
-  #game-screen.active .my-name-badge {
-    position: fixed !important;
-    left: 50% !important;
-    bottom: 142px !important;     /* Kor baa loo qaaday si uu uga sarreeyo labada saf ee badhamada */
-    transform: translateX(-50%) !important;
-    font-size: .62rem !important;
-    padding: 3px 9px !important;
-    background: #0d1e24 !important;
-    border: 1px solid #d4a017 !important;
-    color: #fff !important;
-    border-radius: 999px !important;
-    z-index: 20000 !important;
-    pointer-events: none !important;
-  }
-  
-  /* ── HAND AREA: NIDAAAMKA DHERERKA GACANTA (WAA UU ACTIVE AHAY) ── */
-  #game-screen.active #hand-area {
-    display: flex !important;
-    position: fixed !important;
-    left: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    height: 136px !important;     /* Waxaa laga dhigay 136px (halkii ay ka ahayd 98px) si labada saf u muuqdaan */
-    flex-direction: column !important;
-    gap: 4px !important;
-    background: #081014 !important;
-    border-top: 2px solid #d4a017 !important;
-    /* Padding-ka hoose waa la nidaamiyey si badhamada safka labaad aysan u dhuuman */
-    padding: 6px 6px calc(env(safe-area-inset-bottom, 0px) + 6px) 6px !important;
-    z-index: 9999 !important;
-    box-sizing: border-box !important;
-  }
-  
-  /* ── HAND CARDS: CABBIRKA KAARARKA GACANTA OO LA DEJIXIYEEY ── */
-  #game-screen.active .hand-cards {
-    width: 100% !important;
-    height: 56px !important;       
-    min-height: 56px !important;
-    display: flex !important;
-    flex-flow: row nowrap !important; 
-    overflow-x: auto !important;     
-    overflow-y: hidden !important; 
-    padding: 2px 4px !important;
-    align-items: flex-end !important;
-    -webkit-overflow-scrolling: touch !important;
-    scrollbar-width: none !important;
-  }
+  #game-screen.active .slot-left { position: absolute !important; left: 4px !important; top: 34% !important; transform: translateY(-50%) !important; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 3px !important; z-index: 60 !important; width: auto !important; }
+  #game-screen.active .slot-left .player-badge { writing-mode: vertical-lr !important; transform: rotate(180deg) !important; font-size: .40rem !important; flex-shrink: 0 !important; order: 1 !important; width: 16px !important; min-height: 65px !important; max-height: 80px !important; overflow: hidden !important; border-radius: 50px !important; padding: 8px 0 !important; box-sizing: border-box !important; white-space: nowrap !important; background: #0d1e24 !important; border: 1px solid #d4a017 !important; color: #fff !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 4px !important; letter-spacing: 0px !important; }
+  #game-screen.active .slot-left .opponent-cards { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 0 !important; order: 2 !important; }
+  #game-screen.active .slot-left .opponent-cards .card-back-sm { margin-bottom: -34px !important; margin-right: 0 !important; }
+  #game-screen.active .slot-left .opponent-cards .card-back-sm:last-child { margin-bottom: 0 !important; }
+  #game-screen.active .slot-right { position: absolute !important; right: 4px !important; top: 34% !important; transform: translateY(-50%) !important; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 3px !important; z-index: 60 !important; width: auto !important; }
+  #game-screen.active .slot-right .player-badge { writing-mode: vertical-lr !important; transform: rotate(180deg) !important; font-size: .40rem !important; flex-shrink: 0 !important; order: 2 !important; width: 16px !important; min-height: 65px !important; max-height: 80px !important; overflow: hidden !important; border-radius: 50px !important; padding: 8px 0 !important; box-sizing: border-box !important; white-space: nowrap !important; background: #0d1e24 !important; border: 1px solid #d4a017 !important; color: #fff !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; gap: 4px !important; letter-spacing: 0px !important; }
+  #game-screen.active .slot-right .opponent-cards { display: flex !important; flex-direction: column !important; align-items: center !important; gap: 0 !important; order: 1 !important; }
+  #game-screen.active .slot-right .opponent-cards .card-back-sm { margin-bottom: -34px !important; margin-right: 0 !important; }
+  #game-screen.active .slot-right .opponent-cards .card-back-sm:last-child { margin-bottom: 0 !important; }
+  #game-screen.active .piles-center { position: absolute !important; top: 34% !important; left: 50% !important; transform: translate(-50%,-50%) !important; display: flex !important; gap: 12px !important; z-index: 50 !important; }
+  #game-screen.active .card-back-lg, #game-screen.active .discard-empty, #game-screen.active .piles-center .card.lg { width: 44px !important; height: 62px !important; border-radius: 7px !important; }
+  #game-screen.active .player-sets .card, #game-screen.active .player-set .card, #game-screen.active .my-table-sets .card, #game-screen.active .card.md, #game-screen.active [class*="set"] .card { width: 25px !important; height: 36px !important; min-width: 25px !important; min-height: 36px !important; border-radius: 3px !important; font-size: 7px !important; }
+  #game-screen.active .my-table-sets .set-container, #game-screen.active .player-set, #game-screen.active .player-sets { gap: 1px !important; }
+  #game-screen.active .my-table-sets { position: absolute !important; left: 50% !important; bottom: 175px !important; transform: translateX(-50%) !important; max-width: 92% !important; z-index: 150 !important; }
+  #game-screen.active .my-name-badge { position: fixed !important; left: 50% !important; bottom: 142px !important; transform: translateX(-50%) !important; font-size: .62rem !important; padding: 3px 9px !important; background: #0d1e24 !important; border: 1px solid #d4a017 !important; color: #fff !important; border-radius: 999px !important; z-index: 20000 !important; pointer-events: none !important; }
+  #game-screen.active #hand-area { display: flex !important; position: fixed !important; left: 0 !important; bottom: 0 !important; width: 100% !important; height: 136px !important; flex-direction: column !important; gap: 4px !important; background: #081014 !important; border-top: 2px solid #d4a017 !important; padding: 6px 6px calc(env(safe-area-inset-bottom,0px) + 6px) 6px !important; z-index: 9999 !important; box-sizing: border-box !important; }
+  #game-screen.active .hand-cards { width: 100% !important; height: 56px !important; min-height: 56px !important; display: flex !important; flex-flow: row nowrap !important; overflow-x: auto !important; overflow-y: hidden !important; padding: 2px 4px !important; align-items: flex-end !important; -webkit-overflow-scrolling: touch !important; scrollbar-width: none !important; }
   #game-screen.active .hand-cards::-webkit-scrollbar { display: none !important; }
-  
-  /* KAARARKA GACANTA */
-  #game-screen.active .hand-cards .card,
-  #game-screen.active .hand-cards .card.md {
-    width: 36px !important;       
-    height: 50px !important;       
-    min-width: 36px !important;
-    max-height: 50px !important;
-    margin-right: -10px !important;
-    border-radius: 5px !important;
-    flex-shrink: 0 !important;
-  }
+  #game-screen.active .hand-cards .card, #game-screen.active .hand-cards .card.md { width: 36px !important; height: 50px !important; min-width: 36px !important; max-height: 50px !important; margin-right: -10px !important; border-radius: 5px !important; flex-shrink: 0 !important; }
   #game-screen.active .hand-cards .card:last-child { margin-right: 4px !important; }
   #game-screen.active .hand-cards .card.selected { transform: translateY(-5px) !important; }
-  #game-screen.active .hand-cards .card .cv     { font-size: 10px !important; }
-  #game-screen.active .hand-cards .card .cs     { font-size: .75rem !important; }
+  #game-screen.active .hand-cards .card .cv { font-size: 10px !important; }
+  #game-screen.active .hand-cards .card .cs { font-size: .75rem !important; }
   #game-screen.active .hand-cards .card .cv-bot { font-size: 8px !important; }
-  
-  /* ── CONTROLS ROW: BADHAMADA ── */
-  #game-screen.active .controls-row {
-    width: 100% !important;
-    display: flex !important;
-    flex-direction: row !important;
-    align-items: center !important;
-    gap: 4px !important;
-    flex-wrap: nowrap !important;
-  }
-  #game-screen.active .btn-group {
-    flex: 1 1 auto !important;
-    display: grid !important;
-    grid-template-columns: repeat(4, 1fr) !important;
-    gap: 3px !important;
-    min-width: 0 !important;
-  }
-  #game-screen.active .score-info {
-    flex: 0 0 auto !important;
-    width: 52px !important;
-    font-size: .46rem !important;
-    text-align: right !important;
-    line-height: 1.2 !important;
-    padding: 0 !important; margin: 0 !important;
-    color: rgba(255,255,255,.55) !important;
-    white-space: nowrap !important;
-  }
-  #game-screen.active .btn-green,
-  #game-screen.active .btn-gray,
-  #game-screen.active .btn-blue,
-  #game-screen.active .btn-red {
-    height: 26px !important;      
-    min-height: 26px !important;
-    font-size: .56rem !important;
-    padding: 2px !important;
-    border-radius: 6px !important;
-    line-height: 1 !important;
-    width: 100% !important;
-    white-space: nowrap !important;
-  }
+  #game-screen.active .controls-row { width: 100% !important; display: flex !important; flex-direction: row !important; align-items: center !important; gap: 4px !important; flex-wrap: nowrap !important; }
+  #game-screen.active .btn-group { flex: 1 1 auto !important; display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 3px !important; min-width: 0 !important; }
+  #game-screen.active .score-info { flex: 0 0 auto !important; width: 52px !important; font-size: .46rem !important; text-align: right !important; line-height: 1.2 !important; padding: 0 !important; margin: 0 !important; color: rgba(255,255,255,.55) !important; white-space: nowrap !important; }
+  #game-screen.active .btn-green, #game-screen.active .btn-gray, #game-screen.active .btn-blue, #game-screen.active .btn-red { height: 26px !important; min-height: 26px !important; font-size: .56rem !important; padding: 2px !important; border-radius: 6px !important; line-height: 1 !important; width: 100% !important; white-space: nowrap !important; }
+  #game-screen.active #btn-force-reset { height: 26px !important; min-height: 26px !important; font-size: .56rem !important; padding: 2px !important; border-radius: 6px !important; line-height: 1 !important; width: 100% !important; white-space: nowrap !important; }
 }
