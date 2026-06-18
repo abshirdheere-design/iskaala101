@@ -6,13 +6,13 @@ const path = require('path');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
+  path: '/game-io',
   cors: { origin: '*', methods: ['GET', 'POST'] },
   transports: ['polling', 'websocket'],
 });
 
 const PORT = process.env.PORT || 3000;
 const TURN_TIME_LIMIT = 30000;
-// ── FIX: reconnection allowed within 5 minutes only
 const RECONNECT_WINDOW_MS = 5 * 60 * 1000;
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -20,7 +20,6 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.ht
 
 const rooms = {};
 
-// ── FIX: generate a unique session token
 function genToken() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -313,9 +312,7 @@ function doBotTurn(roomId, botId) {
       io.to(roomId).emit('updateDiscardPile', cardToDiscard);
 
       let botIsBatuuto = false;
-      if (bot.isOpened && bot.hand.length === 2) {
-        botIsBatuuto = true;
-      }
+      if (bot.isOpened && bot.hand.length === 2) botIsBatuuto = true;
       if (botIsBatuuto) {
         bot.hand = []; bot.isOpened = false; bot.openedSets = [];
         io.to(roomId).emit('notification', `🚨 Batuuto! Bot-ka ${bot.name} wuxuu galay Batuuto.`);
@@ -411,8 +408,7 @@ function addBotsAndStartGame(roomId) {
     room.players.push({
       id: botId, name: botNames[i], hand: [], isOpened: false, hasActioned: false,
       pickedFromDiscard: false, openedSets: [], online: true, points: 0, tempScore: 0,
-      isBot: true, hoosgale: false,
-      sessionToken: null, disconnectedAt: null, // bots have no session
+      isBot: true, hoosgale: false, sessionToken: null, disconnectedAt: null,
     });
     io.to(roomId).emit('waitingRoomUpdate', {
       players: room.players.map(p => ({ name: p.name, isBot: p.isBot })),
@@ -436,22 +432,19 @@ io.on('connection', socket => {
     const name          = typeof data === 'string' ? data : data.name;
     const incomingToken = typeof data === 'string' ? null : data.token;
 
-    // ── FIX: reconnect only if token matches AND within 5-minute window
     for (const id in rooms) {
       const room = rooms[id];
       const existing = room.players.find(p => p.name === name && !p.online && !p.isBot);
       if (existing) {
         const tokenMatches = incomingToken && existing.sessionToken && incomingToken === existing.sessionToken;
         const isRecent     = existing.disconnectedAt !== null && (Date.now() - existing.disconnectedAt) < RECONNECT_WINDOW_MS;
-
         if (tokenMatches && isRecent) {
-          // ── legitimate reconnect
-          existing.id            = socket.id;
-          existing.online        = true;
+          existing.id             = socket.id;
+          existing.online         = true;
           existing.disconnectedAt = null;
           myRoomId = id;
           socket.join(id);
-          socket.emit('sessionToken', existing.sessionToken); // re-confirm the token
+          socket.emit('sessionToken', existing.sessionToken);
           socket.emit('startHand', existing.hand);
           if (room.discardPile.length > 0)
             socket.emit('updateDiscardPile', room.discardPile[room.discardPile.length - 1]);
@@ -468,11 +461,9 @@ io.on('connection', socket => {
             scheduleBotTurn(id, cur.id);
           return;
         }
-        // wrong token or expired → fall through to new player join below
       }
     }
 
-    // ── new player join
     let rid = Object.keys(rooms).find(id => rooms[id].players.length < 4 && !rooms[id].gameStarted);
     if (!rid) {
       rid = 'Room_' + Math.random().toString(36).slice(2, 11);
@@ -484,21 +475,19 @@ io.on('connection', socket => {
       };
     }
 
-    // ── FIX: generate session token for new player
     const sessionToken = genToken();
     const player = {
       id: socket.id,
       name: name || `User_${socket.id.slice(0, 4)}`,
       hand: [], isOpened: false, hasActioned: false, pickedFromDiscard: false,
       openedSets: [], online: true, points: 0, tempScore: 0, isBot: false, hoosgale: false,
-      sessionToken,        // ← stored on the player
-      disconnectedAt: null,
+      sessionToken, disconnectedAt: null,
     };
 
     rooms[rid].players.push(player);
     socket.join(rid);
     myRoomId = rid;
-    socket.emit('sessionToken', sessionToken); // ← sent to client
+    socket.emit('sessionToken', sessionToken);
 
     const room = rooms[rid];
     io.to(rid).emit('waitingRoomUpdate', {
@@ -510,14 +499,14 @@ io.on('connection', socket => {
       startGame(rid);
       return;
     }
-    if (room.players.length === 1) {
-      room.botFillTimer = setTimeout(() => {
-        if (rooms[rid] && !rooms[rid].gameStarted && rooms[rid].players.length < 4) {
-          io.to(rid).emit('notification', 'Ciyaartoy la heli waayo — Robotyada ayaa la keenay!');
-          addBotsAndStartGame(rid);
-        }
-      }, 10000);
-    }
+
+    if (room.botFillTimer) { clearTimeout(room.botFillTimer); room.botFillTimer = null; }
+    room.botFillTimer = setTimeout(() => {
+      if (rooms[rid] && !rooms[rid].gameStarted && rooms[rid].players.length < 4) {
+        io.to(rid).emit('notification', 'Ciyaartoy la heli waayo — Robotyada ayaa la keenay!');
+        addBotsAndStartGame(rid);
+      }
+    }, 120000);
   });
 
   socket.on('addBots', () => {
@@ -745,7 +734,6 @@ io.on('connection', socket => {
 
   socket.on('ping_keep_alive', () => socket.emit('pong_alive'));
 
-  // Player deliberately clicked "Ka bax" — remove permanently so no ghost slot remains
   socket.on('leaveGame', () => {
     const room = rooms[myRoomId];
     if (!room) return;
@@ -784,8 +772,8 @@ io.on('connection', socket => {
       room.players = room.players.filter(p => p.id !== socket.id);
       if (room.botFillTimer && room.players.length === 0) { clearTimeout(room.botFillTimer); room.botFillTimer = null; }
     } else {
-      player.online        = false;
-      player.disconnectedAt = Date.now(); // ── FIX: timestamp for 5-min window check
+      player.online         = false;
+      player.disconnectedAt = Date.now();
       if (room.activePlayerIndex === pidx) {
         if (room.turnTimeout) clearTimeout(room.turnTimeout);
         moveToNextPlayer(myRoomId);

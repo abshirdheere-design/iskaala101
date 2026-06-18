@@ -126,11 +126,10 @@
     <p id="reconnect-msg" class="modal-body">Dib u xidh...</p>
   </div>
 </div>
-<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script src="script.js"></script>
 <script>
 function exitGame() {
-  // Tell server to permanently remove us from the room (not just mark offline).
   if (typeof socket !== 'undefined' && socket) socket.emit('leaveGame');
   sessionStorage.removeItem('t101_token');
   location.reload();

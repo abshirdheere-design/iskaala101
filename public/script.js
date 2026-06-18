@@ -21,13 +21,15 @@ let turnTimerInterval = null;
 let dragStartIndex = null;
 let waitingAutoTimer = null;
 let waitingCountdown = 10;
-// Tracks whether we are currently inside an active game session.
-// Only true after startHand is received; cleared on gameOver/exit.
 let inGame = false;
 
 const SESSION_KEY = 't101_token';
 
-const POINT_VALUES = { '6':6,'7':7,'8':8,'9':9,'10':10,'j':10,'q':10,'k':10,'a':11 };
+const POINT_VALUES = { 
+  '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 
+  'j': 10, 'q': 10, 'k': 10, 'a': 11,
+  'J': 10, 'Q': 10, 'K': 10, 'A': 11 
+};
 
 function $(id) { return document.getElementById(id); }
 
@@ -59,6 +61,7 @@ function distributeAllCardsAnimated(myCards, opponentCounts, onDone) {
   const opNames = ['right', 'top', 'left'];
   let delay = 0;
   const step = 100;
+  
   opNames.forEach(pos => {
     const count = opponentCounts[pos] || 14;
     const tx = positions[pos].x, ty = positions[pos].y;
@@ -75,6 +78,7 @@ function distributeAllCardsAnimated(myCards, opponentCounts, onDone) {
       delay += step;
     }
   });
+  
   myCards.forEach((card, index) => {
     const d = delay;
     setTimeout(() => {
@@ -109,33 +113,41 @@ function startTurnTimer() {
 }
 
 function getCardValue(card) {
-  const map = { a:14, k:13, q:12, j:11 };
-  const v = String(card.value).toLowerCase();
+  const map = { a: 14, k: 13, q: 12, j: 11, A: 14, K: 13, Q: 12, J: 11 };
+  const v = String(card.value);
   return map[v] || parseInt(v);
 }
 
 function cardPoints(card) {
-  return POINT_VALUES[String(card.value).toLowerCase()] || 0;
+  return POINT_VALUES[String(card.value)] || 0;
 }
 
 function autoSplitIntoGroups(cards) {
   const groups = [];
   const usedIdx = new Set();
   const temp = cards.map((c, i) => ({ ...c, _i: i }));
-  ['♠','♥','♣','♦'].forEach(suit => {
+  
+  ['♠', '♥', '♣', '♦'].forEach(suit => {
     let sc = temp.filter(c => c.suit === suit && !usedIdx.has(c._i));
     sc.sort((a, b) => getCardValue(a) - getCardValue(b));
     let run = [];
     for (let i = 0; i < sc.length; i++) {
-      if (!run.length || getCardValue(sc[i]) === getCardValue(run[run.length-1]) + 1) {
+      if (!run.length || getCardValue(sc[i]) === getCardValue(run[run.length - 1]) + 1) {
         run.push(sc[i]);
       } else {
-        if (run.length >= 3) { groups.push(run.map(({_i,...r})=>r)); run.forEach(c=>usedIdx.add(c._i)); }
+        if (run.length >= 3) { 
+          groups.push(run.map(({ _i, ...r }) => r)); 
+          run.forEach(c => usedIdx.add(c._i)); 
+        }
         run = [sc[i]];
       }
     }
-    if (run.length >= 3) { groups.push(run.map(({_i,...r})=>r)); run.forEach(c=>usedIdx.add(c._i)); }
+    if (run.length >= 3) { 
+      groups.push(run.map(({ _i, ...r }) => r)); 
+      run.forEach(c => usedIdx.add(c._i)); 
+    }
   });
+  
   const remaining = temp.filter(c => !usedIdx.has(c._i));
   const vals = [...new Set(remaining.map(c => c.value))];
   vals.forEach(val => {
@@ -149,7 +161,7 @@ function autoSplitIntoGroups(cards) {
       }
     });
     if (uniqueSuitGroup.length >= 3) {
-      groups.push(uniqueSuitGroup.map(({_i,...r})=>r));
+      groups.push(uniqueSuitGroup.map(({ _i, ...r }) => r));
       uniqueSuitGroup.forEach(c => usedIdx.add(c._i));
     }
   });
@@ -183,7 +195,7 @@ function applyFooroLogic(winnerId, providerId, allPlayers) {
 
 function makeCard(card, size, opts = {}) {
   const el = document.createElement('div');
-  const isRed = ['♥','♦'].includes(card.suit);
+  const isRed = ['♥', '♦'].includes(card.suit);
   el.className = `card ${size}${opts.selected ? ' selected' : ''}${opts.overlap ? ' overlap' : ''}${isRed ? ' red-suit' : ' black-suit'}`;
   const cv = document.createElement('div'); cv.className = 'cv'; cv.textContent = card.value;
   const cs = document.createElement('div'); cs.className = 'cs'; cs.textContent = card.suit;
@@ -301,7 +313,7 @@ function getTableSetsAtOffset(offset) {
 
 function renderOpponents() {
   const offsets = { left: 3, top: 2, right: 1 };
-  ['left','top','right'].forEach(pos => {
+  ['left', 'top', 'right'].forEach(pos => {
     const p = getPlayerAtOffset(offsets[pos]);
     const sets = getTableSetsAtOffset(offsets[pos]);
     renderOpponentSlot(
@@ -355,12 +367,12 @@ function handleDrop(targetIdx) {
 }
 
 function handleSort() {
-  const vOrder = { '6':6,'7':7,'8':8,'9':9,'10':10,'j':11,'q':12,'k':13,'a':14 };
-  const sOrder = { '♠':4,'♥':3,'♦':2,'♣':1 };
+  const vOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'j': 11, 'q': 12, 'k': 13, 'a': 14, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
+  const sOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
   myHand.sort((a, b) => {
-    const sA = sOrder[a.suit]||0, sB = sOrder[b.suit]||0;
+    const sA = sOrder[a.suit] || 0, sB = sOrder[b.suit] || 0;
     if (a.suit !== b.suit) return sB - sA;
-    return (vOrder[a.value.toLowerCase()]||0) - (vOrder[b.value.toLowerCase()]||0);
+    return (vOrder[a.value] || 0) - (vOrder[b.value] || 0);
   });
   myHand = myHand.map(c => ({ ...c, selected: false }));
   renderHand();
@@ -409,7 +421,7 @@ function handleDhigo() {
         if (isSequence && card.suit === set[0].suit) {
           const sortedValues = set.map(c => getCardValue(c)).sort((a, b) => a - b);
           const myVal = getCardValue(card);
-          if (myVal === sortedValues[0] - 1 || myVal === sortedValues[sortedValues.length-1] + 1) fitsInAnySet = true;
+          if (myVal === sortedValues[0] - 1 || myVal === sortedValues[sortedValues.length - 1] + 1) fitsInAnySet = true;
         } else if (!isSequence && card.value === set[0].value) {
           const alreadyHasSuit = set.some(c => c.suit === card.suit);
           if (!alreadyHasSuit && set.length < 4) fitsInAnySet = true;
@@ -501,7 +513,10 @@ function handleTuur() {
     discardEl.classList.add('card-throw-anim');
     discardEl.addEventListener('animationend', () => discardEl.classList.remove('card-throw-anim'), { once: true });
   }
+  
+  // FIXED: Server-kaagu wuxuu u baahan yahay Object-kan tooska ah
   socket.emit('playCard', { card: cardToPlay, isBatuuto: isBatuutoMove });
+  
   myHand.splice(selIdx, 1);
   if (isBatuutoMove) { myHand = []; isOpened = false; myOpenedSets = []; }
   isMyTurn = false;
@@ -512,17 +527,21 @@ function handleTuur() {
   renderAll();
 }
 
-// ===================== WAITING ROOM =====================
-
 function startWaitingCountdown() {
-  waitingCountdown = 10;
+  // The server now waits 2 full minutes before auto-adding bots.
+  // We only show this countdown when there is exactly 1 human in the room.
+  waitingCountdown = 120;
   const noteEl = $('waiting-auto-note');
-  if (noteEl) noteEl.textContent = `(Robotyadu si toos ah ayay ku biiraan ${waitingCountdown}s)`;
+  if (noteEl) noteEl.textContent = `(Haddaan la helin qof: robots ${waitingCountdown}s)`;
   if (waitingAutoTimer) clearInterval(waitingAutoTimer);
   waitingAutoTimer = setInterval(() => {
     waitingCountdown--;
-    if (noteEl) noteEl.textContent = `(Robotyadu si toos ah ayay ku biiraan ${waitingCountdown}s)`;
-    if (waitingCountdown <= 0) { clearInterval(waitingAutoTimer); waitingAutoTimer = null; if (noteEl) noteEl.textContent = 'Robotyada la keenayaa...'; }
+    if (noteEl) noteEl.textContent = `(Haddaan la helin qof: robots ${waitingCountdown}s)`;
+    if (waitingCountdown <= 0) { 
+      clearInterval(waitingAutoTimer); 
+      waitingAutoTimer = null; 
+      if (noteEl) noteEl.textContent = 'Robotyada la keenayaa...'; 
+    }
   }, 1000);
 }
 
@@ -552,7 +571,14 @@ function renderWaitingRoom(plist) {
     row.innerHTML = `<span style="animation:pulse 1s infinite;color:#555">●</span><span>Sugaya...</span>`;
     list.appendChild(row);
   }
-  if (plist.length >= 4) stopWaitingCountdown();
+  // Haddii 2+ qof oo bini-aadmi ah ay joogaan, timer-ka robots-ka jooji —
+  // server-kuna wuxuu dib u bilaabaa 2 daqiiqo markasta qof cusub soo biiro.
+  const humanCount = plist.filter(p => !p.isBot).length;
+  if (humanCount >= 2 || plist.length >= 4) {
+    stopWaitingCountdown();
+    const noteEl = $('waiting-auto-note');
+    if (noteEl) noteEl.textContent = '';
+  }
 }
 
 function joinGame() {
@@ -561,12 +587,13 @@ function joinGame() {
   if (!name) { showNotification('Fadlan geli magacaaga!'); return; }
   myName = name;
   inGame = false;
-  // Always clear any old token — joining from the start screen is always a fresh game.
-  // Reconnect (with token) only happens automatically when the socket drops mid-game.
   sessionStorage.removeItem(SESSION_KEY);
   showScreen('waiting');
   renderWaitingRoom([]);
-  socket.emit('joinRandom', { name, token: null });
+  
+  // FIXED: Server-ku wuxuu kaliya rabaa magaca oo xadhig ah (string), ee ma rabo Object.
+  socket.emit('joinRandom', name);
+  
   startWaitingCountdown();
   setTimeout(() => {
     typeWriter('waiting-typewriter', `${name}, soo dhowoow! Dulqaado fadlan inta ay ciyaartooyda kale ku soo biirayaan...`, 48);
@@ -595,21 +622,21 @@ function hideReconnectOverlay() {
 
 function initSocket() {
   socket = io({ path: '/game-io', transports: ['polling', 'websocket'] });
+  
   socket.on('disconnect', () => showReconnectOverlay('Xiriirka waa go\'ay — Dib u xidh...'));
+  
   socket.on('connect', () => {
     hideReconnectOverlay();
-    // Auto-reconnect only when socket drops while user is already inside a game.
-    // (inGame is false when on the start/waiting screen, so no stale reconnect.)
     if (inGame && myName) {
       const storedToken = sessionStorage.getItem(SESSION_KEY);
       if (storedToken) {
-        socket.emit('joinRandom', { name: myName, token: storedToken });
+        socket.emit('joinRandom', myName);
       }
     }
   });
+  
   socket.on('connect_error', () => showReconnectOverlay('Serverka lama gaari karo — Sugaya...'));
 
-  // ── FIX: store session token from server in sessionStorage
   socket.on('sessionToken', token => {
     if (token) sessionStorage.setItem(SESSION_KEY, token);
   });
@@ -622,7 +649,7 @@ function initSocket() {
     myHand = hand.map(c => ({ ...c, selected: false }));
     showScreen('game');
     renderHeader(); renderDiscardPile(); renderStockPile(); renderMyBadge(); renderMyTableSets();
-    ['left','top','right'].forEach(pos => { const c = $(`cards-${pos}`); if (c) c.innerHTML = ''; });
+    ['left', 'top', 'right'].forEach(pos => { const c = $(`cards-${pos}`); if (c) c.innerHTML = ''; });
     const opponentCounts = { left: 14, top: 14, right: 14 };
     setTimeout(() => distributeAllCardsAnimated(myHand, opponentCounts, () => renderOpponents()), 150);
   });
@@ -702,7 +729,6 @@ function initSocket() {
   socket.on('gameOver', data => {
     clearInterval(turnTimerInterval);
     inGame = false;
-    // Clear session token so next game starts fresh
     sessionStorage.removeItem(SESSION_KEY);
     if (data.winnerId === socket.id) {
       const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
@@ -751,7 +777,7 @@ function initSocket() {
     if (isMyTurn) startTurnTimer();
   });
 
-  setInterval(() => socket.emit('ping_keep_alive'), 25000);
+  setInterval(() => { if (socket && socket.connected) socket.emit('ping_keep_alive'); }, 25000);
 }
 
 document.addEventListener('visibilitychange', () => {
