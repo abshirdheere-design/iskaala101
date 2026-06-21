@@ -22,6 +22,7 @@ let dragStartIndex = null;
 let waitingAutoTimer = null;
 let waitingCountdown = 10;
 let inGame = false;
+let lastPickedDiscardId = null;
 
 const SESSION_KEY = 't101_token';
 
@@ -196,11 +197,20 @@ function applyFooroLogic(winnerId, providerId, allPlayers) {
 function makeCard(card, size, opts = {}) {
   const el = document.createElement('div');
   const isRed = ['♥', '♦'].includes(card.suit);
-  el.className = `card ${size}${opts.selected ? ' selected' : ''}${opts.overlap ? ' overlap' : ''}${isRed ? ' red-suit' : ' black-suit'}`;
+  const baddaClass = card.fromDiscard ? ' badda-card' : '';
+  el.className = `card ${size}${opts.selected ? ' selected' : ''}${opts.overlap ? ' overlap' : ''}${isRed ? ' red-suit' : ' black-suit'}${baddaClass}`;
+  
   const cv = document.createElement('div'); cv.className = 'cv'; cv.textContent = card.value;
   const cs = document.createElement('div'); cs.className = 'cs'; cs.textContent = card.suit;
   const cvBot = document.createElement('div'); cvBot.className = 'cv-bot'; cvBot.textContent = card.value;
   el.appendChild(cv); el.appendChild(cs); el.appendChild(cvBot);
+  
+  if (card.fromDiscard) {
+    const badge = document.createElement('span');
+    badge.innerText = '★';
+    badge.style.cssText = 'position:absolute;top:-5px;right:2px;color:#ffcc00;font-size:14px;font-weight:bold;pointer-events:none;';
+    el.appendChild(badge);
+  }
   return el;
 }
 
@@ -241,23 +251,144 @@ function renderHand() {
   const container = $('hand-cards');
   if (!container) return;
   container.innerHTML = '';
+  
   myHand.forEach((card, idx) => {
     const el = makeCard(card, 'md', { selected: card.selected });
+    
+    if (card.fromDiscard) {
+      el.style.border = '3px solid #ffcc00';
+      el.style.boxShadow = '0 0 12px #ffcc00';
+      el.style.borderRadius = '8px';
+    }
+    
     el.addEventListener('click', () => toggleCard(idx));
     el.draggable = true;
-    el.addEventListener('dragstart', () => { dragStartIndex = idx; });
+
+    el.addEventListener('dragstart', (e) => {
+      dragStartIndex = idx;
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(() => el.style.opacity = '0.4', 0);
+    });
+    el.addEventListener('dragend', () => {
+      el.style.opacity = '';
+      dragStartIndex = null;
+      // Nadiifi dhammaan drop highlights
+      document.querySelectorAll('.opened-set').forEach(s => {
+        s.classList.remove('drop-target', 'drop-invalid');
+      });
+    });
+
     el.addEventListener('dragover', e => e.preventDefault());
     el.addEventListener('drop', () => handleDrop(idx));
     container.appendChild(el);
   });
+  
   const selScore = myHand.filter(c => c.selected).reduce((s, c) => s + cardPoints(c), 0);
   const selScoreEl = $('sel-score');
   if (selScoreEl) selScoreEl.textContent = selScore;
+  
   const minOpenEl = $('min-open-label');
-  if (minOpenEl) minOpenEl.textContent = `U baahan: ${currentMinToOpen}`;
+  if (minOpenEl) {
+    const shownMin = (!isOpened && pickedFromDiscard) ? currentMinToOpen : 101;
+    minOpenEl.textContent = `U baahan: ${shownMin}`;
+  }
+  
   const btnDhigo = $('btn-dhigo'), btnTuur = $('btn-tuur');
   if (btnDhigo) btnDhigo.disabled = !isMyTurn;
   if (btnTuur) btnTuur.disabled = !isMyTurn;
+}
+
+// ── SAXITAANKA MUHIIMKA AH: canMeelGali ─────────────────────────────────────
+// Hubinta inay kaartu koox geli karto (run ama group)
+function canMeelGali(card, set) {
+  if (!set || set.length < 3) return false;
+
+  // RUN: isla suit, xariiq socota — card waxay kordhisaa horta ama dabada
+  const allSameSuit = set.every(c => c.suit === card.suit);
+  if (allSameSuit) {
+    const vals = set.map(c => getCardValue(c)).sort((a, b) => a - b);
+    const cv = getCardValue(card);
+    if (cv === vals[0] - 1 || cv === vals[vals.length - 1] + 1) return true;
+  }
+
+  // GROUP: isla qiimo, suit kala duwan — card waxay noqon doontaa 4aad
+  const allSameVal = set.every(c => c.value === card.value);
+  const suitAlreadyIn = set.some(c => c.suit === card.suit);
+  if (allSameVal && !suitAlreadyIn && set.length < 4) return true;
+
+  return false;
+}
+
+// ── SAXITAANKA: makeDraggableSet ─────────────────────────────────────────────
+// Function cusub oo door: abuurta set div, waxay ku dartaa listeners drag-and-drop
+// si fiican oo bug la'aan ah.
+function makeDraggableSet(set, setIdx, targetPlayerId) {
+  const setDiv = document.createElement('div');
+  setDiv.className = 'opened-set';
+
+  set.forEach((card, ci) => setDiv.appendChild(makeCard(card, 'sm', { overlap: ci > 0 })));
+
+  setDiv.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (dragStartIndex === null) return;
+    if (!isMyTurn || !isOpened) return;
+    const draggedCard = myHand[dragStartIndex];
+    if (!draggedCard) return;
+    const valid = canMeelGali(draggedCard, set);
+    setDiv.classList.toggle('drop-target', valid);
+    setDiv.classList.toggle('drop-invalid', !valid);
+    e.dataTransfer.dropEffect = valid ? 'move' : 'none';
+  });
+
+  setDiv.addEventListener('dragleave', () => {
+    setDiv.classList.remove('drop-target', 'drop-invalid');
+  });
+
+  setDiv.addEventListener('drop', (e) => {
+    e.preventDefault();
+    setDiv.classList.remove('drop-target', 'drop-invalid');
+    if (dragStartIndex === null) return;
+    if (!isMyTurn || !isOpened) return;
+    const draggedCard = myHand[dragStartIndex];
+    if (!draggedCard) return;
+
+    if (!canMeelGali(draggedCard, set)) {
+      showNotification('❌ Kaartan meesha kuma fiicna!');
+      setDiv.style.transition = 'transform 0.1s';
+      let i = 0;
+      const shake = setInterval(() => {
+        setDiv.style.transform = i % 2 === 0 ? 'translateX(-5px)' : 'translateX(5px)';
+        if (++i > 5) { clearInterval(shake); setDiv.style.transform = ''; }
+      }, 60);
+      dragStartIndex = null;
+      return;
+    }
+
+    // Degdeg kaartu gacanta ka saar (optimistic) — server-ka kahor
+    const cardIdx = dragStartIndex;
+    dragStartIndex = null;
+    myHand.splice(cardIdx, 1);
+    myHand.forEach(c => { c.selected = false; });
+    renderHand();
+
+    // Server-ka u dir — isla event-ka handleDhigo isticmaala
+    socket.emit('addToExistingSets', { cards: [draggedCard] });
+    socket.emit('syncHandAfterMeld', myHand);
+    showNotification('✅ Kaartu miiska ayay u gashay!', 1500);
+  });
+
+  return setDiv;
+}
+
+// ── renderMyTableSets ─────────────────────────────────────────────────────────
+function renderMyTableSets() {
+  const myContainer = $('my-table-sets');
+  if (!myContainer) return;
+  myContainer.innerHTML = '';
+  myOpenedSets.forEach((set, setIdx) => {
+    const setDiv = makeDraggableSet(set, setIdx, socket ? socket.id : '');
+    myContainer.appendChild(setDiv);
+  });
 }
 
 function renderDiscardPile() {
@@ -279,7 +410,10 @@ function renderStockPile() {
   if (el) el.textContent = stockCount;
 }
 
-function renderOpponentSlot(position, opponentName, count, active, opened, sets, isBot) {
+// ── renderOpponentSlot ────────────────────────────────────────────────────────
+// SAXITAANKA: drag-and-drop drop listeners waxaa la isticmaalaa makeDraggableSet
+// si khilaaf iyo dib-u-dhis walba la gaaro.
+function renderOpponentSlot(position, opponentName, count, active, opened, sets, isBot, oppPlayerId) {
   const badge = $(`badge-${position}`), cardsEl = $(`cards-${position}`);
   if (!badge || !cardsEl) return;
   if (!opponentName) { badge.textContent = 'Sugaya...'; badge.className = 'player-badge'; cardsEl.innerHTML = ''; return; }
@@ -288,10 +422,8 @@ function renderOpponentSlot(position, opponentName, count, active, opened, sets,
   badge.className = active ? 'player-badge active' : 'player-badge';
   cardsEl.innerHTML = '';
   if (sets && sets.length > 0) {
-    sets.forEach(set => {
-      const setDiv = document.createElement('div');
-      setDiv.className = 'opened-set';
-      set.forEach((card, ci) => setDiv.appendChild(makeCard(card, 'sm', { overlap: ci > 0 })));
+    sets.forEach((set, setIdx) => {
+      const setDiv = makeDraggableSet(set, setIdx, oppPlayerId || '');
       cardsEl.appendChild(setDiv);
     });
   } else {
@@ -305,17 +437,23 @@ function getPlayerAtOffset(offset) {
   return players[(myIdx + offset) % players.length] || null;
 }
 
-function getTableSetsAtOffset(offset) {
+function getTablePlayerAtOffset(offset) {
   const myIdx = tablePlayers.findIndex(p => p.id === socket.id);
-  if (myIdx === -1) return [];
-  return tablePlayers[(myIdx + offset) % tablePlayers.length]?.openedSets || [];
+  if (myIdx === -1) return null;
+  return tablePlayers[(myIdx + offset) % tablePlayers.length] || null;
+}
+
+function getTableSetsAtOffset(offset) {
+  const tp = getTablePlayerAtOffset(offset);
+  return tp ? (tp.openedSets || []) : [];
 }
 
 function renderOpponents() {
   const offsets = { left: 3, top: 2, right: 1 };
   ['left', 'top', 'right'].forEach(pos => {
     const p = getPlayerAtOffset(offsets[pos]);
-    const sets = getTableSetsAtOffset(offsets[pos]);
+    const tp = getTablePlayerAtOffset(offsets[pos]);
+    const sets = tp ? (tp.openedSets || []) : [];
     renderOpponentSlot(
       pos,
       p ? p.name : (opponents[pos] ? opponents[pos].name : null),
@@ -323,7 +461,8 @@ function renderOpponents() {
       p ? p.id === currentTurnId : false,
       p ? p.isOpened : false,
       sets,
-      p ? p.isBot : false
+      p ? p.isBot : false,
+      tp ? tp.id : (p ? p.id : '')   // ← ID saxda ah oo drop-ka loo diro
     );
   });
 }
@@ -334,18 +473,6 @@ function renderMyBadge() {
   badge.textContent = myName + (isOpened ? ' ✓' : '') + ' (Adiga)';
   const amActive = currentTurnId === socket.id;
   badge.className = `my-name-badge bold ${amActive ? 'active' : 'gold'}`;
-}
-
-function renderMyTableSets() {
-  const container = $('my-table-sets');
-  if (!container) return;
-  container.innerHTML = '';
-  myOpenedSets.forEach(set => {
-    const setDiv = document.createElement('div');
-    setDiv.className = 'opened-set';
-    set.forEach((card, ci) => setDiv.appendChild(makeCard(card, 'sm', { overlap: ci > 0 })));
-    container.appendChild(setDiv);
-  });
 }
 
 function renderAll() {
@@ -369,11 +496,13 @@ function handleDrop(targetIdx) {
 function handleSort() {
   const vOrder = { '6': 6, '7': 7, '8': 8, '9': 9, '10': 10, 'j': 11, 'q': 12, 'k': 13, 'a': 14, 'J': 11, 'Q': 12, 'K': 13, 'A': 14 };
   const sOrder = { '♠': 4, '♥': 3, '♦': 2, '♣': 1 };
+  
   myHand.sort((a, b) => {
     const sA = sOrder[a.suit] || 0, sB = sOrder[b.suit] || 0;
     if (a.suit !== b.suit) return sB - sA;
     return (vOrder[a.value] || 0) - (vOrder[b.value] || 0);
   });
+  
   myHand = myHand.map(c => ({ ...c, selected: false }));
   renderHand();
 }
@@ -411,60 +540,83 @@ function handleDhigo() {
   if (selected.length === 0) { showNotification('Fadlan dooro kaarka aad dhigayso!'); return; }
 
   if (isOpened && selected.length < 3) {
-    let allTableSets = tablePlayers.length ? tablePlayers.flatMap(p => p.openedSets || []) : [...myOpenedSets];
+    const serverSets = tablePlayers.flatMap(p => p.openedSets || []);
+    let currentTableSets = serverSets.length > 0 ? serverSets : [...myOpenedSets];
     let validAdditions = [], invalidCards = [];
+    
     selected.forEach(card => {
       let fitsInAnySet = false;
-      allTableSets.forEach(set => {
+      currentTableSets.forEach(set => {
         if (!set || set.length < 3) return;
-        const isSequence = set[0].suit === set[1].suit;
-        if (isSequence && card.suit === set[0].suit) {
-          const sortedValues = set.map(c => getCardValue(c)).sort((a, b) => a - b);
-          const myVal = getCardValue(card);
-          if (myVal === sortedValues[0] - 1 || myVal === sortedValues[sortedValues.length - 1] + 1) fitsInAnySet = true;
-        } else if (!isSequence && card.value === set[0].value) {
-          const alreadyHasSuit = set.some(c => c.suit === card.suit);
-          if (!alreadyHasSuit && set.length < 4) fitsInAnySet = true;
-        }
+        if (canMeelGali(card, set)) fitsInAnySet = true;
       });
-      if (fitsInAnySet) validAdditions.push(card); else invalidCards.push(card);
+      
+      if (fitsInAnySet) validAdditions.push(card);
+      else invalidCards.push(card);
     });
-    if (invalidCards.length > 0) { showNotification(`Kaarka ${invalidCards[0].value}${invalidCards[0].suit} kuma darsami karo kooxaha miiska saaran!`); return; }
+
     if (validAdditions.length > 0) {
       const selectedIds = new Set(validAdditions.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
       socket.emit('addToExistingSets', { cards: validAdditions });
       socket.emit('syncHandAfterMeld', myHand);
-      showNotification(`Waad ku darsatay miiska ${validAdditions.length} kaar!`);
-      renderAll(); return;
+      if (invalidCards.length > 0) {
+        showNotification(`Waxaad ku darsatay ${validAdditions.length} kaar, laakiin kaarka ${invalidCards[0].value}${invalidCards[0].suit} ma geli karo miiska!`);
+      } else {
+        showNotification(`Waad ku darsatay miiska ${validAdditions.length} kaar!`);
+      }
+      renderAll();
+      return;
+    } else if (invalidCards.length > 0) {
+      showNotification(`Kaarka xulan (${invalidCards[0].value}${invalidCards[0].suit}) kuma darsami karo kooxaha miiska saaran!`);
+      return;
     }
   }
 
-  if (selected.length < 3) { showNotification('Dooro ugu yaraan 3 kaar oo koox ah!'); return; }
+  if (selected.length < 3) { 
+    showNotification('Dooro ugu yaraan 3 kaar oo koox ah si aad u dhigato!'); 
+    return; 
+  }
+  
   const { validGroups, remaining } = findValidGroups(selected);
-  if (remaining.length > 0) { showNotification(`Kaarka ${remaining[0].value} ma geli karo koox!`); return; }
+  if (remaining.length > 0) { 
+    showNotification(`Kaarka ${remaining[0].value}${remaining[0].suit} ma geli karo koox!`); 
+    return; 
+  }
+  
   const moveScore = selected.reduce((s, c) => s + cardPoints(c), 0);
 
   if (!isOpened) {
     const currentTotal = temporaryScore + moveScore;
     const allSetsSoFar = [...myOpenedSets, ...validGroups];
     const hasFourPlus = allSetsSoFar.some(g => g.length >= 4);
-    if (currentTotal >= currentMinToOpen && hasFourPlus) {
-      isOpened = true; iHaveOpened = true; myOpenedSets = allSetsSoFar;
+    const effectiveMin = pickedFromDiscard ? currentMinToOpen : 101;
+    
+    if (currentTotal >= effectiveMin && hasFourPlus) {
+      isOpened = true; 
+      iHaveOpened = true; 
+      myOpenedSets = allSetsSoFar;
       const selectedIds = new Set(selected.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
-      socket.emit('meldSets', { sets: allSetsSoFar, totalScore: currentTotal });
+      socket.emit('meldSets', { sets: allSetsSoFar, totalScore: currentTotal, isAdditional: false });
       socket.emit('syncHandAfterMeld', myHand);
       temporaryScore = 0;
-      showNotification(`Waad degtay! ${currentTotal} dhibco. Qofka xiga: ${currentTotal + 1}`);
+      showNotification(`Waad degtay! ${currentTotal} dhibco.`);
     } else {
-      if (!hasFourPlus) { showNotification('Waxaad u baahan tahay ugu yaraan hal koox oo 4+ kaar ah!'); return; }
-      if (currentTotal < currentMinToOpen) { showNotification(`Ma degi kartid! U baahan: ${currentMinToOpen} dhibco.`); return; }
-      temporaryScore += moveScore; myOpenedSets = [...myOpenedSets, ...validGroups];
+      if (!hasFourPlus) { 
+        showNotification('Waxaad u baahan tahay ugu yaraan hal koox oo 4+ kaar ah!'); 
+        return; 
+      }
+      if (currentTotal < effectiveMin) { 
+        showNotification(`Ma degi kartid! U baahan: ${effectiveMin} dhibco.`); 
+        return; 
+      }
+      temporaryScore += moveScore; 
+      myOpenedSets = [...myOpenedSets, ...validGroups];
       const selectedIds = new Set(selected.map(c => c.id));
       myHand = myHand.filter(c => !selectedIds.has(c.id)).map(c => ({ ...c, selected: false }));
       socket.emit('syncHandAfterMeld', myHand);
-      showNotification(`Wadarta: ${temporaryScore}. U baahan: ${currentMinToOpen}`);
+      showNotification(`Wadarta: ${temporaryScore}. U baahan: ${effectiveMin}`);
     }
   } else {
     const selectedIds = new Set(selected.map(c => c.id));
@@ -473,6 +625,7 @@ function handleDhigo() {
     socket.emit('syncHandAfterMeld', myHand);
     myOpenedSets = [...myOpenedSets, ...validGroups];
   }
+  
   renderAll();
 }
 
@@ -489,13 +642,13 @@ function handleReset() {
 
 function handleTuur() {
   if (!isMyTurn) { showNotification('Sug doorkaaga!'); return; }
-  if (myHand.length <= 14 && !hasDrawn) {
-    showNotification('Fadlan marka hore kaar qaado!'); return;
+  if (!hasDrawn) {
+    showNotification('Fadlan marka hore kaar qaado ama tuurista ka qaado!'); 
+    return;
   }
   if (pickedFromDiscard && !isOpened) {
-    const score = myHand.filter(c => c.selected).reduce((s, c) => s + cardPoints(c), 0);
-    if (score < 101) { showNotification('Maadaama aad tuurista qaadatay, waa inaad degtaa (101)!'); return; }
-    else { showNotification("Fadlan marka hore riix 'Dhigo' si aad u degto!"); return; }
+    showNotification("Tuurista ayaad qaadatay — Marka hore 'Dhigo' riix si aad u degto (101+)!");
+    return;
   }
   const selIdx = myHand.findIndex(c => c.selected);
   if (selIdx === -1) { showNotification('Dooro kaarka aad tuurayso!'); return; }
@@ -513,23 +666,19 @@ function handleTuur() {
     discardEl.classList.add('card-throw-anim');
     discardEl.addEventListener('animationend', () => discardEl.classList.remove('card-throw-anim'), { once: true });
   }
-  
-  // FIXED: Server-kaagu wuxuu u baahan yahay Object-kan tooska ah
   socket.emit('playCard', { card: cardToPlay, isBatuuto: isBatuutoMove });
-  
   myHand.splice(selIdx, 1);
   if (isBatuutoMove) { myHand = []; isOpened = false; myOpenedSets = []; }
   isMyTurn = false;
   hasDrawn = false;
   pickedFromDiscard = false;
+  lastPickedDiscardId = null;
   clearInterval(turnTimerInterval);
-  myHand.forEach(c => c.selected = false);
+  myHand.forEach(c => { c.selected = false; c.fromDiscard = false; });
   renderAll();
 }
 
 function startWaitingCountdown() {
-  // The server now waits 2 full minutes before auto-adding bots.
-  // We only show this countdown when there is exactly 1 human in the room.
   waitingCountdown = 120;
   const noteEl = $('waiting-auto-note');
   if (noteEl) noteEl.textContent = `(Haddaan la helin qof: robots ${waitingCountdown}s)`;
@@ -571,8 +720,6 @@ function renderWaitingRoom(plist) {
     row.innerHTML = `<span style="animation:pulse 1s infinite;color:#555">●</span><span>Sugaya...</span>`;
     list.appendChild(row);
   }
-  // Haddii 2+ qof oo bini-aadmi ah ay joogaan, timer-ka robots-ka jooji —
-  // server-kuna wuxuu dib u bilaabaa 2 daqiiqo markasta qof cusub soo biiro.
   const humanCount = plist.filter(p => !p.isBot).length;
   if (humanCount >= 2 || plist.length >= 4) {
     stopWaitingCountdown();
@@ -590,10 +737,7 @@ function joinGame() {
   sessionStorage.removeItem(SESSION_KEY);
   showScreen('waiting');
   renderWaitingRoom([]);
-  
-  // FIXED: Server-ku wuxuu kaliya rabaa magaca oo xadhig ah (string), ee ma rabo Object.
   socket.emit('joinRandom', name);
-  
   startWaitingCountdown();
   setTimeout(() => {
     typeWriter('waiting-typewriter', `${name}, soo dhowoow! Dulqaado fadlan inta ay ciyaartooyda kale ku soo biirayaan...`, 48);
@@ -646,7 +790,13 @@ function initSocket() {
   socket.on('startHand', hand => {
     stopWaitingCountdown();
     inGame = true;
-    myHand = hand.map(c => ({ ...c, selected: false }));
+    myHand = hand.map(c => ({ ...c, selected: false, fromDiscard: false }));
+    lastPickedDiscardId = null;
+    hasDrawn = false;
+    pickedFromDiscard = false;
+    isOpened = false;
+    iHaveOpened = false;
+    myOpenedSets = [];
     showScreen('game');
     renderHeader(); renderDiscardPile(); renderStockPile(); renderMyBadge(); renderMyTableSets();
     ['left', 'top', 'right'].forEach(pos => { const c = $(`cards-${pos}`); if (c) c.innerHTML = ''; });
@@ -659,8 +809,14 @@ function initSocket() {
     discardTop = data.topDiscard; currentTurnId = data.currentTurn;
     showScreen('game'); renderAll();
   });
+  
+  socket.on('firstMeldPause', (data) => {
+    showNotification(`${data.playerName} ayaa hoos u degay! Waxaad haysataa ${data.duration} ilbiriqsi oo aad ku eegto Turubkiisa rasmiga ah.`, 5000);
+  });
 
   socket.on('playersUpdate', data => {
+    const baddaCardIds = new Set(myHand.filter(c => c.fromDiscard).map(c => c.id));
+
     players = data.players;
     stockCount = data.stockCount;
     currentTurnId = data.currentTurnId;
@@ -671,7 +827,16 @@ function initSocket() {
       showNotification('DOORKAAGA! Kaar qaado ama tuurista ka qaado.', 2500);
     }
     const me = players.find(p => p.id === socket.id);
-    if (me) myScore = me.points || 0;
+    if (me) {
+      myScore = me.points || 0;
+      if (me.hand) {
+        myHand = me.hand.map(c => ({
+          ...c,
+          selected: false,
+          fromDiscard: baddaCardIds.has(c.id) || c.id === lastPickedDiscardId
+        }));
+      }
+    }
     renderAll();
   });
 
@@ -684,40 +849,81 @@ function initSocket() {
   socket.on('updateStockCount', count => { stockCount = count; renderStockPile(); });
 
   socket.on('receiveCard', card => {
-    myHand.push({ ...card, selected: false }); hasDrawn = true; renderHand();
+    myHand.push({ ...card, selected: false, fromDiscard: false });
+    hasDrawn = true;
+    renderHand();
   });
 
-  socket.on('updateHand', data => {
-    myHand = data.hand.map(c => ({ ...c, selected: false })); renderHand();
-  });
-
-  socket.on('discardPickedSuccess', data => {
-    pickedFromDiscard = true; hasDrawn = true;
-    showNotification(`${data.card.value}${data.card.suit} tuuristii ayaad ka qaadatay`, 2000);
+  socket.on('discardPickedSuccess', (data) => {
+    hasDrawn = true;
+    pickedFromDiscard = true;
+    lastPickedDiscardId = data.card.id;
+    showNotification('Kaarka tuurista ayaad qaadatay — Hadda waa inaad degtaa ama soo celisaa!', 3000);
     renderHeader();
   });
 
+  socket.on('updateHand', data => {
+    if (data && data.hand) {
+      const baddaCardIds = new Set(myHand.filter(c => c.fromDiscard).map(c => c.id));
+      const freshHand = data.hand.map(newCard => {
+        const oldCard = myHand.find(c => c.id === newCard.id);
+        const isSelected = oldCard ? oldCard.selected : false;
+        const isFromDiscard = baddaCardIds.has(newCard.id) || newCard.id === lastPickedDiscardId;
+        return { ...newCard, selected: isSelected, fromDiscard: isFromDiscard };
+      });
+      myHand.length = 0;
+      myHand.push(...freshHand);
+    }
+    renderHand();
+  });
+
   socket.on('discardReturnedSuccess', () => {
-    pickedFromDiscard = false; hasDrawn = false;
+    myHand.forEach(c => { c.fromDiscard = false; });
+    pickedFromDiscard = false;
+    hasDrawn = false;
+    lastPickedDiscardId = null;
     showNotification('Kaarkii tuurista ayaad ku soo celisay. Hadda kaar qaado ama tuurista ka qaado.', 3000);
     renderAll();
   });
 
-  socket.on('autoDiscarded', card => {
-    isMyTurn = false; hasDrawn = false; pickedFromDiscard = false;
-    clearInterval(turnTimerInterval);
-    if (card && card.id) {
-      const idx = myHand.findIndex(c => c.id === card.id);
-      if (idx !== -1) myHand.splice(idx, 1);
+  socket.on('autoDiscarded', (data) => {
+    const isMe = data.playerId === socket.id;
+    if (isMe) {
+      isMyTurn = false;
+      hasDrawn = false;
+      pickedFromDiscard = false;
+      lastPickedDiscardId = null;
+      if (turnTimerInterval) clearInterval(turnTimerInterval);
+      if (data.drawnCard) {
+        if (!myHand.some(c => c.id === data.drawnCard.id)) {
+          myHand.push({ ...data.drawnCard, selected: false, fromDiscard: false });
+        }
+      }
+      const discardedCard = data.card; 
+      if (discardedCard && discardedCard.id) {
+        const idx = myHand.findIndex((c) => c.id === discardedCard.id);
+        if (idx !== -1) myHand.splice(idx, 1);
+      }
+      myHand.forEach((c) => { c.selected = false; c.fromDiscard = false; });
+      const cardLabel = discardedCard ? `${discardedCard.value}${discardedCard.suit}` : "Kaar";
+      showNotification(`Waqtigii wuu kaa dhammaaday — ${cardLabel} ayaa si toos ah loo tuuray!`, 4000);
+    } else {
+      const opponent = players.find(p => p.id === data.playerId);
+      const opponentName = opponent ? opponent.name : "Ciyaaryahan";
+      const cardLabel = data.card ? `${data.card.value}${data.card.suit}` : "kaar";
+      showNotification(`Waqtiga wuu ka dhammaaday ${opponentName} — waa laga tuuray ${cardLabel}`, 3000);
     }
-    myHand.forEach(c => c.selected = false);
-    showNotification(`Waqtigii wuu kaa dhamaday — ${card.value}${card.suit} ayaa si toos ah loo tuuray`, 3000);
     renderAll();
   });
 
+  // SAXITAANKA: renderTableSets la tirtiray — renderOpponents() ayaa si buuxda u
+  // qaabileynaysa drop listeners-ka, kuma baahna dib-u-qaabayn kale.
   socket.on('updateTableUI', data => {
-    tablePlayers = data.players; currentMinToOpen = data.nextRequiredPoints;
-    renderOpponents(); renderMyTableSets(); renderHand();
+    tablePlayers = data.players;
+    currentMinToOpen = data.nextRequiredPoints;
+    renderOpponents();
+    renderMyTableSets();
+    renderHand();
   });
 
   socket.on('updateOpponents', data => { opponents = data; renderOpponents(); });
@@ -728,8 +934,8 @@ function initSocket() {
 
   socket.on('gameOver', data => {
     clearInterval(turnTimerInterval);
-    inGame = false;
     sessionStorage.removeItem(SESSION_KEY);
+    if (data.allPlayers) { players = data.allPlayers; }
     if (data.winnerId === socket.id) {
       const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
       if (fooroTarget && !fooroTarget.isBot) {
@@ -751,15 +957,37 @@ function initSocket() {
       const title = $('modal-title'); if (title) title.textContent = 'CIYAARTU WAA DHAMMAATAY';
       const body = $('modal-body'); if (body) body.innerHTML = `<span style="color:#2ecc71;font-weight:700">${data.winnerName}</span> baa guuleystay!`;
     }
+    renderAll();
+  });
+
+  socket.on('allRoundOver', () => {
+    myHand.forEach(c => { c.fromDiscard = false; });
+    lastPickedDiscardId = null;
   });
 
   socket.on('hoosgaleTriggered', () => {
     showNotification('HOOSGALE! Kaarahaagii waa laga qaaday.', 5000);
     myHand = []; isOpened = false; iHaveOpened = false; myOpenedSets = [];
+    hasDrawn = false; pickedFromDiscard = false; lastPickedDiscardId = null;
     renderAll();
   });
 
   socket.on('notification', msg => showNotification(msg));
+
+  socket.on('botPickedDiscard', (data) => {
+    const label = `${data.card.value}${data.card.suit}`;
+    showNotification(`🤖 ${data.botName} wuxuu tuurista ka qaatay: ${label}`, 3500);
+    const el = $('discard-display');
+    if (el) {
+      el.classList.add('discard-bot-took');
+      setTimeout(() => el.classList.remove('discard-bot-took'), 800);
+    }
+  });
+
+  socket.on('opponentPickedDiscard', (data) => {
+    const label = `${data.card.value}${data.card.suit}`;
+    showNotification(`👤 ${data.playerName} wuxuu tuurista ka qaatay: ${label}`, 3000);
+  });
 
   socket.on('timerPaused', data => {
     clearInterval(turnTimerInterval);
