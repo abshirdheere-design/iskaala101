@@ -196,21 +196,40 @@ function applyFooroLogic(winnerId, providerId, allPlayers) {
 
 function makeCard(card, size, opts = {}) {
   const el = document.createElement('div');
+
   const isRed = ['♥', '♦'].includes(card.suit);
-  const baddaClass = card.fromDiscard ? ' badda-card' : '';
-  el.className = `card ${size}${opts.selected ? ' selected' : ''}${opts.overlap ? ' overlap' : ''}${isRed ? ' red-suit' : ' black-suit'}${baddaClass}`;
-  
-  const cv = document.createElement('div'); cv.className = 'cv'; cv.textContent = card.value;
-  const cs = document.createElement('div'); cs.className = 'cs'; cs.textContent = card.suit;
-  const cvBot = document.createElement('div'); cvBot.className = 'cv-bot'; cvBot.textContent = card.value;
-  el.appendChild(cv); el.appendChild(cs); el.appendChild(cvBot);
-  
-  if (card.fromDiscard) {
+  const isFromDiscard = !!card.fromDiscard;
+
+  el.className =
+    `card ${size}` +
+    (opts.selected ? ' selected' : '') +
+    (opts.overlap ? ' overlap' : '') +
+    (isRed ? ' red-suit' : ' black-suit') +
+    (isFromDiscard ? ' badda-card' : '');
+
+  const cv = document.createElement('div');
+  cv.className = 'cv';
+  cv.textContent = card.value;
+
+  const cs = document.createElement('div');
+  cs.className = 'cs';
+  cs.textContent = card.suit;
+
+  const cvBot = document.createElement('div');
+  cvBot.className = 'cv-bot';
+  cvBot.textContent = card.value;
+
+  el.appendChild(cv);
+  el.appendChild(cs);
+  el.appendChild(cvBot);
+
+  if (isFromDiscard) {
     const badge = document.createElement('span');
-    badge.innerText = '★';
-    badge.style.cssText = 'position:absolute;top:-5px;right:2px;color:#ffcc00;font-size:14px;font-weight:bold;pointer-events:none;';
+    badge.className = 'discard-badge';
+    badge.textContent = '★';
     el.appendChild(badge);
   }
+
   return el;
 }
 
@@ -642,10 +661,15 @@ function handleReset() {
 
 function handleTuur() {
   if (!isMyTurn) { showNotification('Sug doorkaaga!'); return; }
-  if (!hasDrawn) {
-    showNotification('Fadlan marka hore kaar qaado ama tuurista ka qaado!'); 
+
+  // BUG 1: Qofka koowaad (15 kaar) — ma baahna draw
+  // BUG 2: isOpened + 1 kaar haray — ma baahna draw
+  const canSkipDraw = myHand.length >= 15 || (isOpened && myHand.length === 1);
+  if (!hasDrawn && !canSkipDraw) {
+    showNotification('Fadlan marka hore kaar qaado ama tuurista ka qaado!');
     return;
   }
+
   if (pickedFromDiscard && !isOpened) {
     showNotification("Tuurista ayaad qaadatay — Marka hore 'Dhigo' riix si aad u degto (101+)!");
     return;
@@ -919,12 +943,24 @@ function initSocket() {
   // SAXITAANKA: renderTableSets la tirtiray — renderOpponents() ayaa si buuxda u
   // qaabileynaysa drop listeners-ka, kuma baahna dib-u-qaabayn kale.
   socket.on('updateTableUI', data => {
-    tablePlayers = data.players;
-    currentMinToOpen = data.nextRequiredPoints;
-    renderOpponents();
-    renderMyTableSets();
-    renderHand();
+  tablePlayers = data.players;
+  
+  // ★ DEBUG — eeg console-ka browser-ka (F12)
+  data.players.forEach(p => {
+    if (p.id !== socket.id && p.openedSets.length > 0) {
+      p.openedSets.forEach((set, si) => {
+        set.forEach(c => {
+          console.log(`Bot set[${si}] ${c.value}${c.suit} fromDiscard=${c.fromDiscard}`);
+        });
+      });
+    }
   });
+  
+  currentMinToOpen = data.nextRequiredPoints;
+  renderOpponents();
+  renderMyTableSets();
+  renderHand();
+});
 
   socket.on('updateOpponents', data => { opponents = data; renderOpponents(); });
 
@@ -933,18 +969,27 @@ function initSocket() {
   });
 
   socket.on('gameOver', data => {
-    clearInterval(turnTimerInterval);
-    sessionStorage.removeItem(SESSION_KEY);
-    if (data.allPlayers) { players = data.allPlayers; }
-    if (data.winnerId === socket.id) {
-      const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
-      if (fooroTarget && !fooroTarget.isBot) {
-        socket.emit('updatePenaltyScore', { playerId: fooroTarget.id, points: 101 });
-        showNotification(`FOORO! ${fooroTarget.name} ayaa 101 dhibco helay!`, 6000);
-      }
+  clearInterval(turnTimerInterval);
+  sessionStorage.removeItem(SESSION_KEY);
+  if (data.allPlayers) { players = data.allPlayers; }
+
+  // Marka hore miiska u muuji si ciyaartoydu u eegaan
+  renderAll();
+
+  // Fooro xisaab — isla markiiba laakiin modal ka hor
+  if (data.winnerId === socket.id) {
+    const fooroTarget = applyFooroLogic(data.winnerId, data.providerId, data.allPlayers);
+    if (fooroTarget && !fooroTarget.isBot) {
+      socket.emit('updatePenaltyScore', { playerId: fooroTarget.id, points: 101 });
+      showNotification(`FOORO! ${fooroTarget.name} ayaa 101 dhibco helay!`, 4000);
     }
+  }
+
+  // Modal 4 ilbiriqsi ka dib soo muuji
+  setTimeout(() => {
     const modal = $('gameover-modal');
     if (modal) modal.classList.remove('hidden');
+
     if (data.winnerId === socket.id) {
       const icon = $('modal-icon'); if (icon) icon.textContent = '🏆';
       const title = $('modal-title'); if (title) title.textContent = 'WAAD GUULEYSATAY!';
@@ -957,8 +1002,8 @@ function initSocket() {
       const title = $('modal-title'); if (title) title.textContent = 'CIYAARTU WAA DHAMMAATAY';
       const body = $('modal-body'); if (body) body.innerHTML = `<span style="color:#2ecc71;font-weight:700">${data.winnerName}</span> baa guuleystay!`;
     }
-    renderAll();
-  });
+  }, 8000);
+});
 
   socket.on('allRoundOver', () => {
     myHand.forEach(c => { c.fromDiscard = false; });

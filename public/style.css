@@ -132,9 +132,22 @@ body {
 }
 /* Qurxinta kaarka badda laga soo qaatay */
 .badda-card {
+  position: relative;
+  z-index: 20;
   border: 2px dashed #ffcc00 !important;
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.8) !important;
   background-color: #fffde6 !important;
+}
+
+.discard-badge {
+  position: absolute;
+  top: -5px;
+  left: 2px;
+  color: #ffcc00;
+  font-size: 14px;
+  font-weight: bold;
+  pointer-events: none;
+  z-index: 999;
 }
 .player-badge.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 12px rgba(46,204,113,.6); animation: pulse 1.2s infinite; }
 .opponent-cards { display: flex !important; flex-direction: column !important; gap: 0 !important; }

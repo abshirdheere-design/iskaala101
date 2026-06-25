@@ -127,6 +127,7 @@ function resetPlayerState(p) {
   p.hand = []; p.isOpened = false; p.hasActioned = false;
   p.pickedFromDiscard = false; p.lastPickedCardId = null;
   p.openedSets = []; p.hoosgale = false; p.tempScore = 0;
+  p.openedWithCardId = null; // ← CUSUB
 }
 
 // ── Express + Socket.IO setup ──────────────────────────────────────
@@ -170,9 +171,39 @@ function updateRoomPlayers(roomId) {
 }
 
 function broadcastTableUI(roomId) {
-  const room = rooms[roomId]; if (!room) return;
+  const room = rooms[roomId];
+  if (!room) return;
+
+  // DEBUG (keeps structure intact)
+  console.log(
+    "OPENED SETS SERVER",
+    room.players.map(p => ({
+      player: p.name,
+      sets: p.openedSets.map(set =>
+        set.map(c => ({
+          value: c.value,
+          suit: c.suit,
+          fromDiscard: !!c.fromDiscard
+        }))
+      )
+    }))
+  );
+
   io.to(roomId).emit('updateTableUI', {
-    players: room.players.map(p=>({ id:p.id, name:p.name, isOpened:p.isOpened, openedSets:p.openedSets })),
+    players: room.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      isOpened: !!p.isOpened,
+
+      openedSets: p.openedSets.map(set =>
+        set.map(card => ({
+          value: card.value,
+          suit: card.suit,
+          fromDiscard: !!card.fromDiscard
+        }))
+      )
+    })),
+
     nextRequiredPoints: room.lastOpenPoints,
   });
 }
@@ -238,6 +269,7 @@ function refillStockIfEmpty(roomId) {
 
 // BUG FIX (Bot section): Bot-ka markuu tuurista ka qaadaa waxaa la hubinaayaa si sax ah
 function doBotTurn(roomId, botId) {
+  console.log("BOT TURN STARTED");
   const room = rooms[roomId]; if (!room || !room.gameStarted) return;
   const botIdx = room.players.findIndex(p=>p.id===botId);
   if (botIdx===-1 || botIdx!==room.activePlayerIndex) return;
@@ -247,24 +279,25 @@ function doBotTurn(roomId, botId) {
   refillStockIfEmpty(roomId);
 
   let drewFromDiscard = false;
+  let botPickedCardIdThisTurn = null;
 
-  // Bot: tuurista ka qaado haddii ay faa'iido leedahay
   if (room.discardPile.length > 0 && !bot.isOpened) {
     const topDiscard = room.discardPile[room.discardPile.length-1];
     const testGroups = autoSplitIntoGroups([...bot.hand, topDiscard]);
     const testScore = testGroups.flat().reduce((s,c)=>s+getCardPoints(c.value),0);
     if (testScore >= room.lastOpenPoints && testGroups.some(g=>g.length>=4)) {
       room.discardPile.pop();
-      bot.hand.push({ ...topDiscard });
+
+      // ✅ XAL: fromDiscard: true waxaa lagu daray HALKAN
+      const newCard = { ...topDiscard, fromDiscard: true };
+
+      botPickedCardIdThisTurn = newCard.id;
+      bot.hand.push(newCard);
       bot.hasActioned = true;
       bot.pickedFromDiscard = true;
-      bot.lastPickedCardId = topDiscard.id;
+      bot.lastPickedCardId = newCard.id;
       io.to(roomId).emit('updateDiscardPile', room.discardPile[room.discardPile.length-1] ?? null);
-      // Calaamadee dhammaan ciyaartoyda: Bot-ku tuurista ayuu ka qaatay
-      io.to(roomId).emit('botPickedDiscard', {
-        botName: bot.name,
-        card: topDiscard
-      });
+      io.to(roomId).emit('botPickedDiscard', { botName: bot.name, card: topDiscard });
       drewFromDiscard = true;
     }
   }
@@ -287,6 +320,16 @@ function doBotTurn(roomId, botId) {
 
     if (!bot.isOpened) {
       if (totalScore >= room.lastOpenPoints && hasFourPlus) {
+		  
+		  console.log(
+      "GROUPS BEFORE PUSH",
+      groups.flat().map(c => ({
+        value: c.value,
+        suit: c.suit,
+        fromDiscard: c.fromDiscard
+      }))
+    );
+	
         const ids = new Set(groups.flat().map(c=>c.id));
         bot.hand = bot.hand.filter(c=>!ids.has(c.id));
         bot.isOpened = true;
@@ -294,14 +337,44 @@ function doBotTurn(roomId, botId) {
         room.lastOpenPoints = totalScore + 1;
         broadcastTableUI(roomId); updateRoomPlayers(roomId);
         io.to(roomId).emit('notification', `🤖 ${bot.name} ayaa furay! (${totalScore} dhibco)`);
+
+        const allSets = room.players.flatMap(p => p.openedSets || []);
+        let mgDone = false;
+        bot.hand = bot.hand.filter(card => {
+          for (const set of allSets) {
+            if (isCardMeelGale(card, [set])) { set.push(card); mgDone = true; return false; }
+          }
+          return true;
+        });
+        if (mgDone) { broadcastTableUI(roomId); updateRoomPlayers(roomId); }
       }
     } else {
       if (groups.length > 0) {
+		  
+		  console.log(
+    "GROUPS BEFORE PUSH",
+    groups.flat().map(c => ({
+      value: c.value,
+      suit: c.suit,
+      fromDiscard: c.fromDiscard
+    }))
+  );
+  
         const ids = new Set(groups.flat().map(c=>c.id));
         bot.hand = bot.hand.filter(c=>!ids.has(c.id));
         bot.openedSets.push(...groups);
         broadcastTableUI(roomId); updateRoomPlayers(roomId);
       }
+
+      const allSets = room.players.flatMap(p => p.openedSets || []);
+      let mgDone = false;
+      bot.hand = bot.hand.filter(card => {
+        for (const set of allSets) {
+          if (isCardMeelGale(card, [set])) { set.push(card); mgDone = true; return false; }
+        }
+        return true;
+      });
+      if (mgDone) { broadcastTableUI(roomId); updateRoomPlayers(roomId); }
     }
 
     setTimeout(() => {
@@ -318,8 +391,7 @@ function doBotTurn(roomId, botId) {
       room.lastProviderId = bot.id;
       io.to(roomId).emit('updateDiscardPile', cardToDiscard);
 
-      // BUG FIX (Bot Batuuto): Bot-ka la-checked si sax ah
-      const botIsBatuuto = bot.isOpened && bot.hand.length === 2;
+      const botIsBatuuto = bot.pickedFromDiscard && bot.isOpened && bot.hand.length === 2;
       if (botIsBatuuto) {
         bot.hand = []; bot.isOpened = false; bot.openedSets = [];
         io.to(roomId).emit('notification', `🚨 Batuuto! Bot-ka ${bot.name} wuxuu galay Batuuto.`);
@@ -328,8 +400,6 @@ function doBotTurn(roomId, botId) {
 
       if (bot.hand.length === 0) { endGame(roomId, bot); return; }
 
-      // BUG FIX (Bot Hoosgale): Bot-ku wuxuu hoosgale ahaanayaa oo kaliya hadduu tuurista ka qaatay
-      // oo aanay isticmaalin kaarka degitaanka
       if (bot.pickedFromDiscard && !bot.hoosgale && !bot.isOpened && !botIsBatuuto) {
         bot.hoosgale = true;
         room.stockPile = shuffle([...room.stockPile, ...bot.hand]);
@@ -574,25 +644,29 @@ io.on('connection', socket => {
 
   // BUG FIX H (playCard): La hubiyay in kaarku server-ka ku jiro kahor inta aan la tuuri
   socket.on('playCard', data => {
-    const room = rooms[myRoomId]; if (!room || !room.gameStarted) return;
-    const card = data.card || data; if (!card || !card.id) return;
-    const p = room.players[room.activePlayerIndex];
-    if (!p || p.id !== socket.id) { socket.emit('notification', 'Sug doorkaaga!'); return; }
-    if (!p.hasActioned) { socket.emit('notification', 'Marka hore kaar qaado!'); return; }
-    const idx = p.hand.findIndex(c => c.id === card.id);
-    if (idx === -1) {
-      if (p.hasActioned && p.hand.length <= 14) { room.turnToken = (room.turnToken||0) + 1; moveToNextPlayer(myRoomId); }
-      return;
-    }
-    const nextIdx = (room.activePlayerIndex + 1) % room.players.length;
-    const nextPlayer = room.players[nextIdx];
-    const cardsLeft = p.hand.length - 1;
-    if (cardsLeft > 0 && cardsLeft < 3) {
-      socket.emit('notification', '❌ Ma tuuri kartid! Gacantaada waxaa ku haraya kaarar ka yar 3 oo aan Set noqon karin (Batuuto).');
-      return;
-    }
+  const room = rooms[myRoomId]; if (!room || !room.gameStarted) return;
+  const card = data.card || data; if (!card || !card.id) return;
+  const p = room.players[room.activePlayerIndex];
+  if (!p || p.id !== socket.id) { socket.emit('notification', 'Sug doorkaaga!'); return; }
+
+  const isLastCardOpened = p.isOpened && p.hand.length === 1;
+  if (!p.hasActioned && !isLastCardOpened) {
+    socket.emit('notification', 'Marka hore kaar qaado!'); return;
+  }
+
+  const idx = p.hand.findIndex(c => c.id === card.id);
+  if (idx === -1) {
+    if (p.hasActioned && p.hand.length <= 14) { room.turnToken = (room.turnToken||0) + 1; moveToNextPlayer(myRoomId); }
+    return;
+  }
+  const nextIdx = (room.activePlayerIndex + 1) % room.players.length;
+  const nextPlayer = room.players[nextIdx];
+  const cardsLeft = p.hand.length - 1;
+
+  // ── MeelGale check — xabadda ugu dambaysa ama isOpened laguma diidna ──────
+  if (!p.isOpened && p.hand.length > 1 && nextPlayer && nextPlayer.isOpened) {
     const isActuallyDegaya = (p.openedSets && p.openedSets.length > 0) || data.isDegaya;
-    if (!p.isOpened && !isActuallyDegaya && nextPlayer && nextPlayer.isOpened) {
+    if (!isActuallyDegaya) {
       const allTableSets = room.players.flatMap(pl => pl.openedSets || []);
       if (isCardMeelGale(card, allTableSets)) {
         const myToken = room.turnToken; room.turnStartTime = Date.now();
@@ -611,61 +685,72 @@ io.on('connection', socket => {
         return;
       }
     }
-    if (room.turnTimeout) { clearTimeout(room.turnTimeout); room.turnTimeout = null; }
-    room.turnToken = (room.turnToken||0) + 1; room.lastProviderId = p.id;
-    const discarded = p.hand.splice(idx, 1)[0];
-    room.discardPile.push(discarded);
-    io.to(myRoomId).emit('updateDiscardPile', discarded);
-    socket.emit('updateHand', { hand: p.hand });
-    if (p.hand.length === 0) { endGame(myRoomId, p); return; }
-    if (p.pickedFromDiscard && !p.hoosgale && !p.isOpened) {
-      p.hoosgale = true;
-      room.stockPile = shuffle([...room.stockPile, ...p.hand]);
-      p.hand = [];
-      socket.emit('hoosgaleTriggered');
-      io.to(myRoomId).emit('notification', `⚠️ ${p.name} HOOSGALE!`);
-      updateRoomPlayers(myRoomId);
-    }
+  }
+
+  if (room.turnTimeout) { clearTimeout(room.turnTimeout); room.turnTimeout = null; }
+  room.turnToken = (room.turnToken||0) + 1; room.lastProviderId = p.id;
+  const discarded = p.hand.splice(idx, 1)[0];
+  room.discardPile.push(discarded);
+  io.to(myRoomId).emit('updateDiscardPile', discarded);
+  socket.emit('updateHand', { hand: p.hand });
+
+  if (p.hand.length === 0) { endGame(myRoomId, p); return; }
+
+  // ── BATUUTO: tuurista ka qaatay + ku degay + 2 kaar haray ─────────────────
+  if (p.pickedFromDiscard && p.isOpened && p.hand.length === 2) {
+    room.stockPile = shuffle([...room.stockPile, ...p.hand]);
+    p.hand = []; p.isOpened = false; p.openedSets = [];
+    socket.emit('hoosgaleTriggered');
+    io.to(myRoomId).emit('notification', `🚨 ${p.name} BATUUTO! 2 kaarrood dib la celiyay.`);
+    updateRoomPlayers(myRoomId); broadcastTableUI(myRoomId);
     moveToNextPlayer(myRoomId);
-  });
+    return;
+  }
 
-  socket.on('meldSets', data => {
-    const room = rooms[myRoomId]; if (!room || !room.gameStarted) return;
-    const p = room.players.find(pl => pl.id === socket.id); if (!p) return;
-
-    // XEERKA: Haddii qandahada ka qaatay → kaliya 101 ayaa loo baahan yahay.
-    // Haddii tuurista ka qaatay → waa inuu ka dhaafaa lastOpenPoints (qiimaha kor u kacay).
-    const lagaMaMaarmaan = p.pickedFromDiscard ? room.lastOpenPoints : 101;
-
-    if (data.totalScore !== undefined && data.totalScore < lagaMaMaarmaan) {
-      socket.emit('notification', `Khalad: Waxaad u baahan tahay ${lagaMaMaarmaan} dhibco si aad u degto.`);
-      return;
-    }
-
-    const ids = new Set(data.sets.flat().map(c => c.id));
-    p.hand = p.hand.filter(c => !ids.has(c.id));
-    p.isOpened = true;
-    p.openedSets.push(...data.sets);
-
-    // lastOpenPoints waxaa cusbooneysiiya kaliya ruuxii tuurista ka qaatay,
-    // ama kii ugu horreeyay ee furay (si xeer-aasaas loo dhigo).
-    if (data.totalScore !== undefined) {
-      if (p.pickedFromDiscard) {
-        // Tuurista qaatay + dhigay: qiimaha kor u kac
-        room.lastOpenPoints = data.totalScore + 1;
-        room.hasFirstOpened = true;
-      } else if (!room.hasFirstOpened) {
-        // Qandahada qaatay + kii ugu horreeyay ee furay: xeer-aasaas dhig
-        room.lastOpenPoints = data.totalScore + 1;
-        room.hasFirstOpened = true;
-      }
-      // Qandahada qaatay + qof kale horay u furay → lastOpenPoints MA BEDDELO
-    }
-
-    socket.emit('updateHand', { hand: p.hand });
-    broadcastTableUI(myRoomId);
+  // ── HOOSGALE: tuurista ka qaatay + aan furin ──────────────────────────────
+  if (p.pickedFromDiscard && !p.hoosgale && !p.isOpened) {
+    p.hoosgale = true;
+    room.stockPile = shuffle([...room.stockPile, ...p.hand]);
+    p.hand = [];
+    socket.emit('hoosgaleTriggered');
+    io.to(myRoomId).emit('notification', `⚠️ ${p.name} HOOSGALE!`);
     updateRoomPlayers(myRoomId);
-  });
+  }
+
+  moveToNextPlayer(myRoomId);
+});
+
+ socket.on('meldSets', data => {
+  const room = rooms[myRoomId]; if (!room || !room.gameStarted) return;
+  const p = room.players.find(pl => pl.id === socket.id); if (!p) return;
+
+  const lagaMaMaarmaan = p.pickedFromDiscard ? room.lastOpenPoints : 101;
+
+  if (data.totalScore !== undefined && data.totalScore < lagaMaMaarmaan) {
+    socket.emit('notification', `Khalad: Waxaad u baahan tahay ${lagaMaMaarmaan} dhibco si aad u degto.`);
+    return;
+  }
+
+  const ids = new Set(data.sets.flat().map(c => c.id));
+  p.hand = p.hand.filter(c => !ids.has(c.id));
+  p.isOpened = true;
+  p.openedSets.push(...data.sets);
+  p.openedWithCardId = p.pickedFromDiscard ? p.lastPickedCardId : null;
+
+  if (data.totalScore !== undefined) {
+    if (p.pickedFromDiscard) {
+      room.lastOpenPoints = data.totalScore + 1;
+      room.hasFirstOpened = true;
+    } else if (!room.hasFirstOpened) {
+      room.lastOpenPoints = data.totalScore + 1;
+      room.hasFirstOpened = true;
+    }
+  }
+
+  socket.emit('updateHand', { hand: p.hand });
+  broadcastTableUI(myRoomId);
+  updateRoomPlayers(myRoomId);
+});
 
   socket.on('addToExistingSets', data => {
     const room = rooms[myRoomId]; if (!room || !room.gameStarted) return;
