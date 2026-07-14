@@ -149,6 +149,13 @@ body {
   pointer-events: none;
   z-index: 999;
 }
+.opponent-table-sets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 5px;
+    justify-content: center;
+}
 .player-badge.active { border-color: var(--green); color: var(--green); box-shadow: 0 0 12px rgba(46,204,113,.6); animation: pulse 1.2s infinite; }
 .opponent-cards { display: flex !important; flex-direction: column !important; gap: 0 !important; }
 .opponent-cards .card-back-sm { margin-bottom: -44px !important; margin-right: 0 !important; }
@@ -241,7 +248,47 @@ body {
 .score-info .gold { color: var(--gold); font-weight: 700; }
 .score-info .muted { color: rgba(255,255,255,.35); }
 .score-info .small { font-size: .75rem; }
-.notification { position: fixed; top: 56px; left: 50%; transform: translateX(-50%); z-index: 9999; background: #000; border: 1px solid var(--gold); color: var(--gold); padding: 12px 28px; border-radius: 14px; font-weight: 700; font-size: .85rem; box-shadow: 0 0 20px rgba(241,196,15,.35); max-width: 320px; text-align: center; animation: slideDown .25s ease; }
+/* ==========================================================================
+   NOTIFICATION ANIMATIONS (Qaybta Fariimaha)
+   ========================================================================== */
+
+#notification-container {
+  position: fixed;
+  top: 20px;          /* Masaafada sare */
+  left: 50%;          /* U dhaqaaq badhtamaha */
+  transform: translateX(-50%); /* Si uu u noqdo mid si sax ah u dhexaynaya */
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Fariimaha hal xariiq u wada dhig */
+  gap: 10px;
+  width: 90%;         /* Si uu u qaado shaashadaha yaryar */
+  max-width: 400px;
+  pointer-events: none; /* Si aadan ugu gujin karin si qaldan */
+}
+
+.notif-card {
+  background: #000;
+  border: 1px solid var(--gold);
+  color: var(--gold);
+  padding: 12px 28px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  text-align: center;
+  animation: slideDown 0.5s ease-out forwards; /* Waxaan bedelnay animation-ka */
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-50px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; transform: translateY(-20px); }
+}
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.85); display: flex; align-items: center; justify-content: center; z-index: 99999; }
 .modal-box { background: #1a2a2a; border: 2px solid var(--gold); border-radius: 20px; padding: 40px 32px; text-align: center; max-width: 340px; width: 90%; box-shadow: 0 0 40px rgba(241,196,15,.35); }
 .modal-icon { font-size: 3rem; margin-bottom: 12px; }
