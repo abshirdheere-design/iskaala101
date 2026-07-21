@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Turubka 101</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
 <div id="setup-screen" class="screen active">
@@ -19,6 +19,39 @@
     <p class="setup-hint">Fadlan geli magacaaga si aad u bilowdo</p>
     <input id="name-input" type="text" placeholder="Magacaaga..." maxlength="15" autocomplete="off" />
     <button id="join-btn">BILOW CIYAARTA</button>
+
+    <!-- ─── Persistent Score Auth Section ─────────────────────────────── -->
+    <div class="auth-section">
+      <div class="auth-divider">── Dhibacyada Xifidinta ──</div>
+      <div id="auth-status" class="auth-status"></div>
+      <div id="auth-login-area" class="auth-login-area">
+        <div class="auth-row">
+          <input id="auth-name-input" type="text" placeholder="Magacaaga..." maxlength="15" autocomplete="off" class="auth-input" />
+          <input id="auth-pin-input" type="password" placeholder="PIN (4 lambar)" maxlength="4" pattern="\d{4}" inputmode="numeric" class="auth-input auth-pin" />
+        </div>
+        <div class="auth-row auth-btn-row">
+          <button id="btn-auth-login" class="btn-auth" onclick="handleAuthSubmit('login')">Gal</button>
+          <button id="btn-auth-register" class="btn-auth btn-auth-alt" style="display:none" onclick="handleAuthSubmit('register')">Diiwaangeli</button>
+        </div>
+        <div class="auth-meta">
+          <span id="auth-mode-label" class="auth-mode-label">Gal</span>
+          <span> · </span>
+          <a id="auth-toggle-link" href="#" class="auth-toggle" onclick="event.preventDefault();toggleAuthMode()">Xisab cusub? Diiwaangeli</a>
+        </div>
+        <p id="auth-error" class="auth-error"></p>
+      </div>
+    </div>
+
+    <!-- Xiili selector -->
+    <div class="xiili-row">
+      <label for="xiili-select" class="xiili-label">🏁 >-------------------------> Ku ciyaar:</label>
+      <select id="xiili-select" class="xiili-select">
+        <option value="5" selected>5 Fooro</option>
+        <option>AMA</option>
+        <option value="10">10 Fooro</option>
+      </select>
+    </div>
+
     <p class="setup-footer-info">4 ciyaartooy · Iskala 101 · Multiplayer</p>
   </div>
   <footer class="footer">Developed by <span class="gold">Abshir Hassan</span> · © 2026</footer>
@@ -46,7 +79,7 @@
     <div class="header-left">
       <span class="online-dot">●</span>
       <span id="hdr-name" class="gold bold"></span>
-      <span id="hdr-opened-badge" class="badge-opened hidden"><---< Degay</span>
+      <span id="hdr-opened-badge" class="badge-opened hidden">&#x2B05; Degay</span>
     </div>
     <div id="hdr-turn" class="hdr-turn-idle">Sugaya...</div>
     <div class="header-right">
@@ -54,7 +87,10 @@
       <button id="btn-exit" onclick="exitGame()">Ka bax</button>
     </div>
   </header>
- <div id="table-area">
+
+  
+
+  <div id="table-area">
     <div class="felt-oval"></div>
     <div class="player-slot slot-top" id="slot-top">
       <div class="player-badge" id="badge-top">Sugaya...</div>
@@ -90,7 +126,7 @@
     </div>
     <div id="my-table-sets" class="my-table-sets"></div>
     <div id="my-name-badge" class="my-name-badge gold bold"></div>
-</div>
+  </div>
   <div id="hand-area">
     <div id="hand-cards" class="hand-cards"></div>
     <div class="controls-row">
@@ -109,21 +145,46 @@
     </div>
   </div>
   <div id="notification" class="notification hidden"></div>
-  
+
   <div id="gameover-modal" class="modal-overlay hidden">
     <div class="modal-box">
       <div id="modal-icon" class="modal-icon"></div>
       <h2 id="modal-title" class="modal-title"></h2>
       <p id="modal-body" class="modal-body"></p>
-      
       <p id="modal-open-info" class="modal-body" style="font-size:0.9em; opacity:0.85; margin-top:-8px"></p>
-      
+
+      <!-- Leaderboard -->
+      <div id="modal-leaderboard-wrap" class="modal-leaderboard-wrap hidden">
+        <div class="modal-lb-title">🏆 Jadwalka Dhibacyada</div>
+        <div id="modal-leaderboard" class="modal-lb-body"></div>
+      </div>
+
       <button onclick="exitGame()" class="btn-restart">Ciyaar Cusub</button>
     </div>
   </div>
-  
+
   <footer class="footer footer-game">Developed by <span class="gold">Abshir Hassan</span> · © 2026</footer>
 </div>
+
+<!-- Season End Modal -->
+<div id="season-modal" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="modal-icon">🏁</div>
+    <h2 class="modal-title" style="color:#e74c3c">XILLIGU WAA DHAMMADAY!</h2>
+    <p id="season-modal-body" class="modal-body"></p>
+    <div id="season-final-scores" class="fooro-list" style="margin:12px 0;width:100%"></div>
+    <button onclick="startNewSeason()" class="btn-restart">Xilli Cusub Bilow</button>
+  </div>
+</div>
+<!-- Fooro Panel — muuqda ciyaartoy walba si joogto ah -->
+  <div id="fooro-panel" class="fooro-panel">
+    <div class="fooro-panel-header">
+      <span class="fooro-panel-title">📊 Foorooyinka</span>
+      <span id="fooro-target-label" class="fooro-target-label"></span>
+    </div>
+    <div id="fooro-list" class="fooro-list"></div>
+  </div>
+  
 <div id="reconnect-overlay" class="modal-overlay hidden">
   <div class="modal-box">
     <div class="modal-icon">📡</div>
@@ -132,7 +193,7 @@
   </div>
 </div>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="script.js"></script>
+<script src="/script.js"></script>
 <script>
 function exitGame() {
   if (typeof socket !== 'undefined' && socket) socket.emit('leaveGame');

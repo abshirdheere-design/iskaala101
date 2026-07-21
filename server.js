@@ -27,6 +27,62 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
+  // ─── Auth & Leaderboard API ──────────────────────────────────────────────────
+  const apiHeaders = { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' };
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, apiHeaders); res.end(); return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/auth/register') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        const { name, pin } = JSON.parse(body);
+        if (!name || !pin || !/^\d{4}$/.test(String(pin))) {
+          res.writeHead(400, apiHeaders);
+          res.end(JSON.stringify({ ok: false, error: 'Magaca iyo 4-digit PIN ayaa loo baahan yahay' }));
+          return;
+        }
+        if (getProfile(name)) {
+          res.writeHead(409, apiHeaders);
+          res.end(JSON.stringify({ ok: false, error: 'Magacaan horey loo diiwaangaliyay' }));
+          return;
+        }
+        const profile = createProfile(name.trim(), String(pin));
+        res.writeHead(200, apiHeaders);
+        res.end(JSON.stringify({ ok: true, profile: { name: profile.name, score: 0, wins: 0, fooros: 0, games: 0 } }));
+      } catch { res.writeHead(400, apiHeaders); res.end(JSON.stringify({ ok: false, error: 'Khalad' })); }
+    });
+    return;
+  }
+
+  if (req.method === 'POST' && req.url === '/api/auth/login') {
+    let body = '';
+    req.on('data', d => { body += d; });
+    req.on('end', () => {
+      try {
+        const { name, pin } = JSON.parse(body);
+        const profile = validateProfile(name, pin);
+        if (!profile) {
+          res.writeHead(401, apiHeaders);
+          res.end(JSON.stringify({ ok: false, error: 'Magaca ama PIN-ku waa khalad' }));
+          return;
+        }
+        res.writeHead(200, apiHeaders);
+        res.end(JSON.stringify({ ok: true, profile: { name: profile.name, score: profile.score, wins: profile.wins, fooros: profile.fooros, games: profile.games } }));
+      } catch { res.writeHead(400, apiHeaders); res.end(JSON.stringify({ ok: false, error: 'Khalad' })); }
+    });
+    return;
+  }
+
+  if (req.method === 'GET' && req.url === '/api/leaderboard') {
+    res.writeHead(200, apiHeaders);
+    res.end(JSON.stringify({ ok: true, leaderboard: getLeaderboardData() }));
+    return;
+  }
+
   let filePath = join(PUBLIC, req.url === '/' ? 'index.html' : req.url);
   filePath = filePath.split('?')[0];
 
@@ -46,6 +102,138 @@ const httpServer = createServer((req, res) => {
     res.end('Not found');
   }
 });
+
+// ─── Player Profiles (In-Memory) ────────────────────────────────────────────
+const playerProfiles = new Map();
+
+function getProfile(name) {
+  return playerProfiles.get(name.toLowerCase().trim());
+}
+
+function createProfile(name, pin) {
+  const key = name.toLowerCase().trim();
+  if (playerProfiles.has(key)) return null;
+  const profile = { name: name.trim(), pin: String(pin), score: 0, wins: 0, fooros: 0, games: 0 };
+  playerProfiles.set(key, profile);
+  return profile;
+}
+
+function validateProfile(name, pin) {
+  const profile = getProfile(name);
+  if (!profile || profile.pin !== String(pin)) return null;
+  return profile;
+}
+
+function getLeaderboardData() {
+  return [...playerProfiles.values()]
+    .filter(p => p.games > 0)
+    .sort((a, b) => b.score - a.score || b.wins - a.wins || a.fooros - b.fooros)
+    .map(p => ({ name: p.name, score: p.score, wins: p.wins, fooros: p.fooros, games: p.games }));
+}
+
+// Server-side fooro target
+function findFooroTarget(winnerId, providerId, players) {
+  const hoosgale = players.find(p => p.id !== winnerId && p.hoosgale);
+  if (hoosgale) return hoosgale.id;
+
+  let provIdx = players.findIndex(p => p.id === providerId);
+  if (provIdx === -1) {
+    const winIdx = players.findIndex(p => p.id === winnerId);
+    if (winIdx === -1) return null;
+    provIdx = (winIdx - 1 + players.length) % players.length;
+  }
+
+  for (let i = 0; i < players.length; i++) {
+    const idx = ((provIdx - i) % players.length + players.length) % players.length;
+    const p = players[idx];
+    if (p.id === winnerId) continue;
+    if (!p.isOpened) return p.id;
+  }
+
+  const others = players.filter(p => p.id !== winnerId);
+  if (!others.length) return null;
+  const withPts = others.map(p => ({ p, pts: (p.hand || []).reduce((s, c) => s + (c.points || 0), 0) }));
+  const maxPts = Math.max(...withPts.map(x => x.pts));
+  const top = withPts.filter(x => x.pts === maxPts);
+  if (top.length === 1) return top[0].p.id;
+  const winIdx = players.findIndex(p => p.id === winnerId);
+  for (let i = 1; i <= players.length; i++) {
+    const p = players[(winIdx + i) % players.length];
+    if (p.id !== winnerId) return p.id;
+  }
+  return null;
+}
+
+function updatePersistentScores(room, winnerId) {
+  const fooroTargetId = findFooroTarget(winnerId, room.lastProviderId, room.players);
+  const roundDeltas = {};
+  room.players.forEach(pl => {
+    if (pl.isBot || !pl.profileName) return;
+    const profile = getProfile(pl.profileName);
+    if (!profile) return;
+    profile.games += 1;
+    let delta = 0;
+    if (pl.id === winnerId) {
+      profile.score += 1; profile.wins += 1; delta = 1;
+    } else if (pl.id === fooroTargetId) {
+      profile.score -= 1; profile.fooros += 1; delta = -1;
+    }
+    roundDeltas[pl.id] = { name: pl.name, delta, total: profile.score };
+  });
+  return { fooroTargetId, roundDeltas };
+}
+
+// ─── Session Score Tracking (per room, shown in fooro panel) ─────────────────
+// Waxaan ku xifidaa xiilliyada session-ka qolkiiba gaar ahaan.
+// Ciyaartoy kasta waxay arki kartaa dhibcaha (net = wins - fooros) si joogto ah.
+function updateSessionScores(room, winnerId, fooroTargetId) {
+  if (!room.sessionScores) room.sessionScores = {};
+  room.players.forEach(pl => {
+    if (pl.isBot) return; // Bot-ada lama xifidayo
+    const name = pl.name;
+    if (!room.sessionScores[name]) room.sessionScores[name] = { wins: 0, fooros: 0 };
+    if (pl.id === winnerId) {
+      room.sessionScores[name].wins += 1;
+    } else if (pl.id === fooroTargetId) {
+      room.sessionScores[name].fooros += 1;
+    }
+  });
+}
+
+function initializeRoomScores(room, target = 5) {
+  if (!room.sessionScores) {
+    room.sessionScores = {};
+  }
+  room.xiiliTarget = target;
+  
+  // Hubi in ciyaartoyda oo dhan (bots iyo dadba) loo sameeyo diiwaan
+  if (room.players && Array.isArray(room.players)) {
+    room.players.forEach(p => {
+      // Isticmaal p.name ama p.id si uusan magacu u maqnaan
+      const playerName = p.name || p.id;
+      if (playerName && !room.sessionScores[playerName]) {
+        room.sessionScores[playerName] = { wins: 0, fooros: 0 };
+      }
+    });
+  }
+}
+
+function broadcastSessionScores(roomId) {
+  const room = rooms[roomId];
+  if (!room) return;
+  
+  // Hubi in ciyaartoyda cusub ama la jooga ay ku jiraan diiwaanka
+  room.players.forEach(p => {
+    if (!p.isBot && !room.sessionScores[p.name]) {
+      room.sessionScores[p.name] = { wins: 0, fooros: 0 };
+    }
+  });
+
+  io.to(roomId).emit('sessionFooroUpdate', {
+    scores: room.sessionScores,
+    xiiliTarget: room.xiiliTarget || 5
+  });
+}
 
 // ─── Game Logic ───────────────────────────────────────────────────────────────
 const TURN_TIME_LIMIT = 30000;
@@ -128,17 +316,82 @@ function autoSplitIntoGroups(cards) {
   return groups;
 }
 
-function chooseBotDiscard(hand) {
-  if (!hand.length) return null;
+function findPairs(cards) {
+  const pairs = [];
+  const used = new Set();
+
+  const byValue = {};
+  for (const c of cards) (byValue[c.value] ??= []).push(c);
+  for (const val in byValue) {
+    const seenSuits = new Set();
+    const grp = [];
+    for (const c of byValue[val]) {
+      if (!seenSuits.has(c.suit)) { seenSuits.add(c.suit); grp.push(c); }
+    }
+    if (grp.length === 2) { pairs.push(grp); grp.forEach(c => used.add(c.id)); }
+  }
+
+  for (const suit of ['♠', '♥', '♣', '♦']) {
+    const sc = cards.filter(c => c.suit === suit && !used.has(c.id))
+      .sort((a, b) => getCardValue(a) - getCardValue(b));
+    for (let i = 0; i < sc.length - 1; i++) {
+      if (used.has(sc[i].id) || used.has(sc[i + 1].id)) continue;
+      if (getCardValue(sc[i + 1]) === getCardValue(sc[i]) + 1) {
+        pairs.push([sc[i], sc[i + 1]]);
+        used.add(sc[i].id); used.add(sc[i + 1].id);
+      }
+    }
+  }
+  return pairs;
+}
+
+function pickBestDiscard(hand, isSafe) {
   const groups = autoSplitIntoGroups([...hand]);
   const groupedIds = new Set(groups.flat().map(c => c.id));
-  const unmatched = hand.filter(c => !groupedIds.has(c.id));
-  if (unmatched.length > 0) return unmatched.sort((a, b) => getCardPoints(b.value) - getCardPoints(a.value))[0];
-  if (groups.length > 0) {
-    groups.sort((a, b) => a.length - b.length);
-    return [...groups[0]].sort((a, b) => getCardPoints(b.value) - getCardPoints(a.value))[0];
+  const rest = hand.filter(c => !groupedIds.has(c.id));
+  const pairs = findPairs(rest);
+  const pairedIds = new Set(pairs.flat().map(c => c.id));
+
+  const singles = rest.filter(c => !pairedIds.has(c.id) && isSafe(c));
+  if (singles.length > 0) return singles.sort((a, b) => getCardPoints(b.value) - getCardPoints(a.value))[0];
+
+  const safePairs = pairs.filter(p => p.some(isSafe));
+  if (safePairs.length > 0) {
+    safePairs.sort((a, b) =>
+      a.reduce((s, c) => s + getCardPoints(c.value), 0) - b.reduce((s, c) => s + getCardPoints(c.value), 0));
+    return safePairs[0].filter(isSafe).sort((a, b) => getCardPoints(b.value) - getCardPoints(a.value))[0];
   }
-  return hand[hand.length - 1];
+
+  const safeGroups = groups.filter(g => g.some(isSafe));
+  if (safeGroups.length > 0) {
+    safeGroups.sort((a, b) => a.length - b.length);
+    return safeGroups[0].filter(isSafe).sort((a, b) => getCardPoints(b.value) - getCardPoints(a.value))[0];
+  }
+
+  return hand.find(isSafe) || null;
+}
+
+function chooseBotDiscard(hand, room, bot) {
+  if (!hand.length) return null;
+  const nextPlayer = room && bot ? room.players[(room.activePlayerIndex + 1) % room.players.length] : null;
+  const meelGaleActive = !!(room && bot && !bot.isOpened && hand.length > 1 && nextPlayer && nextPlayer.isOpened);
+  const allTableSets = meelGaleActive ? room.players.flatMap(pl => pl.openedSets || []) : [];
+  const isSafe = c => !meelGaleActive || !isCardMeelGale(c, allTableSets);
+  return pickBestDiscard(hand, isSafe) || hand[hand.length - 1];
+}
+
+function checkBatuuta(room, p) {
+  if (!p || !p.isOpened || p.hoosgale) return false;
+  if (!p.hand || p.hand.length !== 2) return false;
+  const openedCount = (p.openedSets || []).reduce((s, set) => s + set.length, 0);
+  if (openedCount !== 12) return false;
+
+  room.stockPile = shuffle([...room.stockPile, ...p.hand]);
+  p.hand = [];
+  p.isOpened = false;
+  p.openedSets = [];
+  p.hoosgale = true;
+  return true;
 }
 
 function isCardMeelGale(card, openedSets) {
@@ -153,6 +406,32 @@ function isCardMeelGale(card, openedSets) {
     if (set.every(c => c.value === card.value) && !set.some(c => c.suit === card.suit) && set.length < 4) return true;
   }
   return false;
+}
+
+function pickAutoDiscard(room, cur) {
+  const hand = cur.hand;
+  if (!hand || !hand.length) return null;
+
+  const nextIdx = (room.activePlayerIndex + 1) % room.players.length;
+  const nextPlayer = room.players[nextIdx];
+  const meelGaleActive = !cur.isOpened && hand.length > 1 && nextPlayer && nextPlayer.isOpened;
+  const allTableSets = meelGaleActive ? room.players.flatMap(pl => pl.openedSets || []) : [];
+  const isSafe = c => !meelGaleActive || !isCardMeelGale(c, allTableSets);
+
+  const takeById = id => {
+    const idx = hand.findIndex(c => c.id === id);
+    return idx !== -1 ? hand.splice(idx, 1)[0] : null;
+  };
+
+  if (cur.pickedFromDiscard && cur.lastPickedCardId) {
+    const idx = hand.findIndex(c => c.id === cur.lastPickedCardId);
+    if (idx !== -1 && isSafe(hand[idx])) return takeById(cur.lastPickedCardId);
+  }
+
+  const best = pickBestDiscard(hand, isSafe);
+  if (best) return takeById(best.id);
+
+  return hand.pop();
 }
 
 function getPlayerOpenedPoints(player) {
@@ -184,7 +463,7 @@ function resetPlayerState(p) {
   p.hand = []; p.isOpened = false; p.hasActioned = false;
   p.pickedFromDiscard = false; p.lastPickedCardId = null;
   p.openedSets = []; p.hoosgale = false; p.tempScore = 0;
-  p.openedWithCardId = null;
+  p.openedWithCardId = null; p.openProviderId = null;
 }
 
 // ─── Socket.IO ────────────────────────────────────────────────────────────────
@@ -217,36 +496,20 @@ function broadcastTableUI(roomId) {
 }
 
 function endGame(roomId, potentialWinner, extraData = {}) {
-  const room = rooms[roomId]; 
+  const room = rooms[roomId];
   if (!room) return;
 
-  // 1. HUBIN: Ma dhab baa inuu guulaystay?
-  if (!potentialWinner.isOpened) {
-    console.log(`Qalad: ${potentialWinner.name} wuu isku dayay inuu guulaysto isagoon degin.`);
-    return;
-  }
+  if (!potentialWinner.isOpened) return;
 
-  // Jooji socodka ciyaarta
   room.gameStarted = false;
   if (room.turnTimeout) clearTimeout(room.turnTimeout);
-  
-  // 2. Xisaabinta dhibcaha oo sax ah
-  room.players.forEach(pl => { 
-    // Qofka guulaystay dhibic laguma kordhiyo
-    if (pl.id === potentialWinner.id) return;
 
-    // Haddii uusan qofku degin, fooro ayaa la saarayaa
-    if (!pl.isOpened) {
-      pl.points += 101; 
-    } 
-    
-    // Haddii uu degay laakiin uu ku jiro 'hoosgale', ku dar 1 dhibic
-    if (pl.isOpened && pl.hoosgale) {
-      pl.points += 1;
-    }
+  room.players.forEach(pl => {
+    if (pl.id === potentialWinner.id) return;
+    if (!pl.isOpened) { pl.points += 101; }
+    if (pl.isOpened && pl.hoosgale) { pl.points += 1; }
   });
 
-  // Diritaanka xogta guusha
   io.to(roomId).emit('gameOver', {
     winnerId: potentialWinner.id,
     winnerName: potentialWinner.name,
@@ -255,23 +518,36 @@ function endGame(roomId, potentialWinner, extraData = {}) {
     lastCard: extraData.lastCard || null,
     stats: room.playerStats || {},
     history: room.moveHistory || [],
-    allPlayers: room.players.map(pl => ({ 
-      id: pl.id, 
-      name: pl.name, 
-      isOpened: pl.isOpened, 
-      hand: pl.hand, 
-      points: pl.points, 
-      isBot: pl.isBot, 
-      openedSets: pl.openedSets 
+    allPlayers: room.players.map(pl => ({
+      id: pl.id,
+      name: pl.name,
+      isOpened: pl.isOpened,
+      hand: pl.hand,
+      points: pl.points,
+      isBot: pl.isBot,
+      openedSets: pl.openedSets,
+      hoosgale: !!pl.hoosgale,
+      openProviderId: pl.openProviderId || null
     })),
   });
 
-  // Jadwalka tirtirista qolka
-  setTimeout(() => { 
-    if (rooms[roomId]) { 
-      io.in(roomId).socketsLeave(roomId); 
-      delete rooms[roomId]; 
-    } 
+  // Persistent scores
+  const { fooroTargetId, roundDeltas } = updatePersistentScores(room, potentialWinner.id);
+  const leaderboard = getLeaderboardData();
+  if (leaderboard.length > 0) {
+    io.to(roomId).emit('leaderboardUpdate', { leaderboard, roundDeltas, fooroTargetId });
+  }
+
+  // ─── SESSION SCORES: ku dar wins/fooros + u dir ciyaartoyda oo dhan ────────
+  updateSessionScores(room, potentialWinner.id, fooroTargetId);
+  // Xaaladda fooro-panelka hadda waxay muuqanaysaa ciyaartoyda oo dhan si joogto ah
+  broadcastSessionScores(roomId);
+
+  setTimeout(() => {
+    if (rooms[roomId]) {
+      io.in(roomId).socketsLeave(roomId);
+      delete rooms[roomId];
+    }
   }, 8000);
 }
 
@@ -341,7 +617,6 @@ function doBotTurn(roomId, botId) {
       bot.hand.push(newCard);
       bot.hasActioned = true; bot.pickedFromDiscard = true; bot.lastPickedCardId = newCard.id;
       io.to(roomId).emit('updateDiscardPile', room.discardPile[room.discardPile.length - 1] ?? null);
-      // FIX: Bot-ka marka uu tuurista ka qaato, kaartiisa lama muujiyo ciyaartoyda kale
       io.to(roomId).emit('botPickedDiscard', { botName: bot.name });
       drewFromDiscard = true;
     }
@@ -364,6 +639,7 @@ function doBotTurn(roomId, botId) {
       if (totalScore >= room.lastOpenPoints && hasFourPlus) {
         const ids = new Set(groups.flat().map(c => c.id));
         bot.hand = bot.hand.filter(c => !ids.has(c.id));
+        if (bot.pickedFromDiscard) bot.openProviderId = room.lastProviderId || null;
         bot.isOpened = true; bot.openedSets.push(...groups);
         if (!room.hasFirstOpened) {
           room.hasFirstOpened = true; room.firstOpenerId = bot.id;
@@ -416,7 +692,7 @@ function doBotTurn(roomId, botId) {
       if (!room.gameStarted) return;
       if (bot.hand.length === 0) { endGame(roomId, bot); return; }
 
-      const cardToDiscard = chooseBotDiscard(bot.hand);
+      const cardToDiscard = chooseBotDiscard(bot.hand, room, bot);
       if (!cardToDiscard) { moveToNextPlayer(roomId); return; }
 
       const di = bot.hand.findIndex(c => c.id === cardToDiscard.id);
@@ -429,11 +705,8 @@ function doBotTurn(roomId, botId) {
 
       room.lastProviderId = bot.id;
 
-      const allTableSets = room.players.flatMap(p => p.openedSets || []);
-      if (bot.isOpened && bot.hand.length === 2 && bot.hand.every(c => isCardMeelGale(c, allTableSets))) {
-        room.stockPile = shuffle([...room.stockPile, ...bot.hand]);
-        bot.hand = []; bot.isOpened = false; bot.openedSets = []; bot.hoosgale = true;
-        io.to(roomId).emit('notification', `🚨 Batuuto! Bot-ka ${bot.name} waxaa u soo haray 2 xabbo.`);
+      if (checkBatuuta(room, bot)) {
+        io.to(roomId).emit('notification', `🚨 Batuuto! Bot-ka ${bot.name} wuxuu degay 12 kaar, 2-na wuu hayay — dib ayaa loo celiyay.`);
         updateRoomPlayers(roomId); broadcastTableUI(roomId);
         moveToNextPlayer(roomId);
         return;
@@ -488,11 +761,7 @@ function startTurnTimer(roomId) {
     }
 
     if (cur.hasActioned) {
-      let cardToDiscard;
-      if (cur.pickedFromDiscard && cur.lastPickedCardId) {
-        const idx = cur.hand.findIndex(c => c.id === cur.lastPickedCardId);
-        cardToDiscard = idx !== -1 ? cur.hand.splice(idx, 1)[0] : cur.hand.pop();
-      } else { cardToDiscard = cur.hand.pop(); }
+      const cardToDiscard = pickAutoDiscard(room, cur);
       if (cardToDiscard) {
         room.discardPile.push(cardToDiscard);
         io.to(roomId).emit('updateDiscardPile', cardToDiscard);
@@ -521,11 +790,21 @@ function startTurnTimer(roomId) {
 function startGame(roomId) {
   const room = rooms[roomId];
   if (!room || room.gameStarted) return;
-  room.gameStarted = true; room.turnStartTime = Date.now();
-  room.lastOpenPoints = 101; room.hasFirstOpened = false;
-  room.firstOpenerId = null; room.firstOpenerOriginalPoints = null;
-  room.barrierFrozen = false; room.openedPlayerIds = new Set();
-  room.barrierHistory = [101]; room.playerStats = {}; room.moveHistory = [];
+  
+  room.gameStarted = true; 
+  room.turnStartTime = Date.now();
+  room.lastOpenPoints = 101; 
+  room.hasFirstOpened = false;
+  room.firstOpenerId = null; 
+  room.firstOpenerOriginalPoints = null;
+  room.barrierFrozen = false; 
+  room.openedPlayerIds = new Set();
+  room.barrierHistory = [101]; 
+  room.playerStats = {}; 
+  room.moveHistory = [];
+
+  // Bilaabista ama xaqiijinta xogta foorooyinka qolkan
+  initializeRoomScores(room, room.xiiliTarget || 5);
 
   const gd = prepareGame();
   room.stockPile = gd.remainingDeck;
@@ -539,6 +818,7 @@ function startGame(roomId) {
   if (room.stockPile.length > 0) room.discardPile = [room.stockPile.pop()];
   const topDiscard = room.discardPile[room.discardPile.length - 1];
   const firstPlayer = room.players[0];
+  
   room.players.forEach(p => {
     if (!p.isBot) io.to(p.id).emit('matchFound', { roomId, topDiscard, currentTurn: firstPlayer.id });
   });
@@ -547,6 +827,55 @@ function startGame(roomId) {
   broadcastTableUI(roomId);
   startTurnTimer(roomId);
   updateRoomPlayers(roomId);
+
+  // U dir xogta foorooyinka ciyaartoyda bilowga ciyaarta
+  broadcastSessionScores(roomId);
+}
+
+// ─── Kaydinta Guulaha iyo Foorada marka ciyaartu dhammaato ──────────────────
+function recordGameOutcome(room, winnerId, providerId) {
+  if (!room.sessionScores) room.sessionScores = {};
+
+  const allPlayers = room.players || [];
+  
+  // Hel guuleystaha
+  const winner = allPlayers.find(p => p.id === winnerId);
+  if (winner && !winner.isBot) {
+    if (!room.sessionScores[winner.name]) {
+      room.sessionScores[winner.name] = { wins: 0, fooros: 0 };
+    }
+    room.sessionScores[winner.name].wins++;
+  }
+
+  // Xisaabi foorada (tusaale ahaan qofka la xiray ama dhibcaha badan qabtay)
+  // Halkaan waxaad ku xiriirin kartaa logic-kaaga applyFooroLogic
+  let loserTarget = null;
+  allPlayers.forEach(p => {
+    if (!p.isBot) {
+      if (!room.sessionScores[p.name]) {
+        room.sessionScores[p.name] = { wins: 0, fooros: 0 };
+      }
+      // Haddii uu yahay kan fooradu ku dhacday (tusaale: 101 dhibcood ama hoosgale)
+      if (p.id !== winnerId && (p.points >= 101 || p.fooroHit)) {
+        loserTarget = p;
+      }
+    }
+  });
+
+  if (loserTarget && !loserTarget.isBot) {
+    room.sessionScores[loserTarget.name].fooros++;
+  }
+
+  // Baahi xogta cusub ee foorooyinka
+  broadcastSessionScores(room.id);
+
+  // Hubi haddii qof uu gaaray xiiliTarget (tusaale: 5 ama 10 fooro)
+  const target = room.xiiliTarget || 5;
+  const seasonEnded = Object.values(room.sessionScores).some(d => d.fooros >= target);
+  
+  if (seasonEnded) {
+    io.to(room.id).emit('seasonEnded', { scores: room.sessionScores });
+  }
 }
 
 function addBotsAndStartGame(roomId) {
@@ -557,7 +886,7 @@ function addBotsAndStartGame(roomId) {
   const needed = 4 - room.players.length;
   for (let i = 0; i < needed; i++) {
     const botId = `bot_${Math.random().toString(36).slice(2, 9)}`;
-    room.players.push({ id: botId, name: botNames[i], hand: [], isOpened: false, hasActioned: false, pickedFromDiscard: false, lastPickedCardId: null, openedSets: [], online: true, points: 0, tempScore: 0, isBot: true, hoosgale: false, sessionToken: null, disconnectedAt: null });
+    room.players.push({ id: botId, name: botNames[i], hand: [], isOpened: false, hasActioned: false, pickedFromDiscard: false, lastPickedCardId: null, openedSets: [], online: true, points: 0, tempScore: 0, isBot: true, hoosgale: false, openProviderId: null, sessionToken: null, disconnectedAt: null, profileName: null });
     io.to(roomId).emit('waitingRoomUpdate', { players: room.players.map(p => ({ name: p.name, isBot: p.isBot })) });
   }
   setTimeout(() => { room._botsAdding = false; startGame(roomId); }, 1500);
@@ -570,6 +899,8 @@ io.on('connection', socket => {
   socket.on('joinRandom', (data) => {
     const name = typeof data === 'string' ? data : data.name;
     const incomingToken = typeof data === 'string' ? null : data.token;
+    const profileName = typeof data === 'string' ? null : (data.profileName || null);
+    const xiiliTarget = typeof data === 'string' ? 5 : (parseInt(data.xiiliTarget) || 5);
 
     for (const id in rooms) {
       const room = rooms[id];
@@ -590,6 +921,8 @@ io.on('connection', socket => {
           socket.emit('matchFound', { roomId: id, topDiscard: room.discardPile[room.discardPile.length - 1], currentTurn: cur ? cur.id : null });
           updateRoomPlayers(id);
           socket.emit('notification', 'Waad ku soo laabtay!');
+          // Send current session scores on reconnect
+          broadcastSessionScores(id);
           if (room.gameStarted && cur && cur.isBot && !room.turnTimeout && !room.isPaused) scheduleBotTurn(id, cur.id);
           return;
         }
@@ -599,12 +932,22 @@ io.on('connection', socket => {
     let rid = Object.keys(rooms).find(id => rooms[id].players.length < 4 && !rooms[id].gameStarted);
     if (!rid) {
       rid = 'Room_' + Math.random().toString(36).slice(2, 11);
-      rooms[rid] = { id: rid, players: [], gameStarted: false, stockPile: [], discardPile: [], activePlayerIndex: 0, lastOpenPoints: 101, turnTimeout: null, turnStartTime: null, lastProviderId: null, botFillTimer: null, isPaused: false, pauseTimeLeft: 0, turnToken: 0, hasFirstOpened: false, firstOpenerId: null, firstOpenerOriginalPoints: null, barrierFrozen: false, openedPlayerIds: new Set(), barrierHistory: [101], playerStats: {}, moveHistory: [] };
+      rooms[rid] = {
+        id: rid, players: [], gameStarted: false, stockPile: [], discardPile: [],
+        activePlayerIndex: 0, lastOpenPoints: 101, turnTimeout: null, turnStartTime: null,
+        lastProviderId: null, botFillTimer: null, isPaused: false, pauseTimeLeft: 0,
+        turnToken: 0, hasFirstOpened: false, firstOpenerId: null, firstOpenerOriginalPoints: null,
+        barrierFrozen: false, openedPlayerIds: new Set(), barrierHistory: [101],
+        playerStats: {}, moveHistory: [],
+        // Session scores: xifidaada dhibcaha xiilliyada - muuqdaa ciyaartoy walba
+        sessionScores: {},
+        xiiliTarget: xiiliTarget,
+      };
     }
 
     const sessionToken = genToken();
     const room = rooms[rid];
-    room.players.push({ id: socket.id, name: name || `User_${socket.id.slice(0, 4)}`, hand: [], isOpened: false, hasActioned: false, pickedFromDiscard: false, lastPickedCardId: null, openedSets: [], online: true, points: 0, tempScore: 0, isBot: false, hoosgale: false, sessionToken, disconnectedAt: null });
+    room.players.push({ id: socket.id, name: name || `User_${socket.id.slice(0, 4)}`, hand: [], isOpened: false, hasActioned: false, pickedFromDiscard: false, lastPickedCardId: null, openedSets: [], online: true, points: 0, tempScore: 0, isBot: false, hoosgale: false, openProviderId: null, sessionToken, disconnectedAt: null, profileName: profileName || null });
     socket.join(rid); myRoomId = rid;
     socket.emit('sessionToken', sessionToken);
     io.to(rid).emit('waitingRoomUpdate', { players: room.players.map(p => ({ name: p.name, isBot: p.isBot })) });
@@ -723,12 +1066,9 @@ io.on('connection', socket => {
     if (p.hand.length === 0) { endGame(myRoomId, p); return; }
     room.lastProviderId = p.id;
 
-    const allTableSets = room.players.flatMap(pl => pl.openedSets || []);
-    if (p.isOpened && p.hand.length === 2 && p.hand.every(c => isCardMeelGale(c, allTableSets))) {
-      room.stockPile = shuffle([...room.stockPile, ...p.hand]);
-      p.hand = []; p.isOpened = false; p.openedSets = []; p.hoosgale = true;
+    if (checkBatuuta(room, p)) {
       socket.emit('hoosgaleTriggered');
-      io.to(myRoomId).emit('notification', `🚨 ${p.name} wuxuu galay BATUUTO! 2 kaarrood dib la celiyay.`);
+      io.to(myRoomId).emit('notification', `🚨 ${p.name} wuxuu degay 12 kaar, 2-na wuu hayay — waa BATUUTO! Kaararkii dib ayaa loo celiyay.`);
       updateRoomPlayers(myRoomId); broadcastTableUI(myRoomId);
       moveToNextPlayer(myRoomId); return;
     }
@@ -770,6 +1110,7 @@ io.on('connection', socket => {
     const ids = new Set(data.sets.flat().map(c => c.id));
     p.hand = p.hand.filter(c => !ids.has(c.id));
     const wasOpenedBefore = p.isOpened;
+    if (!wasOpenedBefore && p.pickedFromDiscard) p.openProviderId = room.lastProviderId || null;
     p.isOpened = true; p.openedSets.push(...finalSets);
     if (!room.openedPlayerIds) room.openedPlayerIds = new Set();
     room.openedPlayerIds.add(p.id);
@@ -824,12 +1165,9 @@ io.on('connection', socket => {
 
     if (p.hand.length === 0) { broadcastTableUI(myRoomId); updateRoomPlayers(myRoomId); endGame(myRoomId, p); return; }
 
-    const allTableSets = room.players.flatMap(pl => pl.openedSets || []);
-    if (p.hand.length === 2 && p.hand.every(c => isCardMeelGale(c, allTableSets))) {
-      room.stockPile = shuffle([...room.stockPile, ...p.hand]);
-      p.hand = []; p.isOpened = false; p.openedSets = []; p.hoosgale = true;
+    if (checkBatuuta(room, p)) {
       socket.emit('hoosgaleTriggered');
-      io.to(myRoomId).emit('notification', `🚨 ${p.name} wuxuu galay BATUUTO!`);
+      io.to(myRoomId).emit('notification', `🚨 ${p.name} wuxuu degay 12 kaar, 2-na wuu hayay — waa BATUUTO! Kaararkii dib ayaa loo celiyay.`);
       updateRoomPlayers(myRoomId); broadcastTableUI(myRoomId);
       moveToNextPlayer(myRoomId); return;
     }
@@ -854,6 +1192,8 @@ io.on('connection', socket => {
       updateRoomPlayers(myRoomId);
       const room = rooms[myRoomId];
       if (room.discardPile.length > 0) socket.emit('updateDiscardPile', room.discardPile[room.discardPile.length - 1]);
+      // Also resend session scores on sync
+      broadcastSessionScores(myRoomId);
     }
   });
 
@@ -890,6 +1230,10 @@ io.on('connection', socket => {
       if (!room.isPaused && room.gameStarted && rooms[myRoomId]?.turnToken === token) moveToNextPlayer(myRoomId);
     }, room.pauseTimeLeft);
     io.to(myRoomId).emit('timerResumed');
+  });
+
+  socket.on('getLeaderboard', () => {
+    socket.emit('leaderboardUpdate', { leaderboard: getLeaderboardData() });
   });
 
   socket.on('ping_keep_alive', () => socket.emit('pong_alive'));
