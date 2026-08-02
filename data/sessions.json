@@ -1,0 +1,28 @@
+{
+  "5": {
+    "target": 5,
+    "scores": {
+      "ABSHIR": {
+        "wins": 12,
+        "fooros": 0,
+        "displayName": "Abshir"
+      },
+      "JAAMAC": {
+        "wins": 0,
+        "fooros": 4,
+        "displayName": "JAAMAC"
+      },
+      "JIMCAALE": {
+        "wins": 0,
+        "fooros": 2,
+        "displayName": "JIMCAALE"
+      },
+      "FAARAX": {
+        "wins": 0,
+        "fooros": 1,
+        "displayName": "FAARAX"
+      }
+    },
+    "ended": false
+  }
+}

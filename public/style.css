@@ -768,3 +768,14 @@ body {
   text-align: center;
   padding: 6px;
 }
+.fooro-danger {
+  background: rgba(231, 76, 60, 0.15) !important;
+  border-left: 3px solid #e74c3c;
+}
+.fooro-panel.minimized .fooro-list {
+  display: none !important;
+}
+.fooro-panel.minimized {
+  width: auto !important;
+  min-width: 150px;
+}
