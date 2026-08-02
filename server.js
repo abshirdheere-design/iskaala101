@@ -446,7 +446,7 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
 
   attachRoomToXiiliSession(room, target);
   
-  // 1. CLONE SCORES (Si aynaan u kharribin xogta asalka ah inta aan simulaysanka wadaasno)
+  // 1. CLONE SCORES
   const simulatedScores = JSON.parse(JSON.stringify(room.sessionScores));
   const deltas = {};
 
@@ -475,30 +475,22 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
   const chainedDabaaqTarget = chainedDabaaqTargetName
     ? ensureSessionScore(simulatedScores, chainedDabaaqTargetName)
     : null;
-  // Mixed/chained Dabaaq:
-  // Jimcaale -2, Faarax -3, Abshir +2, Jaamac +8
-  //   -> Jimcaale -1, Faarax -5, Abshir +1, Jaamac +8.
-  // Tani waa sababta simulation-ku u baahan yahay inuu sii raaco qofka
-  // xiga ee aan degin ka hor inta aan Apply Dabaaq iyo Gameover la dirin.
+
   const isMixedDabaaq = Boolean(chainedDabaaqTarget);
   const isNegativeDabaaq = isDabaaqVictimDiff && ownerFooros > 0 && victimFooros > 0;
   const isPositiveDabaaq = isDabaaqVictimDiff && ownerWins > 0 && victimWins > 0
-                           && ownerFooros === 0 && victimFooros === 0;
-  // Dabaaq waxaa la magacaabi karaa oo keliya marka labada dhinac ay
-  // isku xaalad yihiin: fooro-vs-fooro (-1 vs -1), ama guul-vs-guul
-  // (+1 vs +1). Fooro caadi ah, ama xaalad mixed/chained ah, Dabaaq ma aha.
+                         && ownerFooros === 0 && victimFooros === 0;
+
   const dabaaqType = !isMixedDabaaq && isNegativeDabaaq
     ? 'negative'
     : !isMixedDabaaq && isPositiveDabaaq
       ? 'positive'
       : null;
 
-  // 3. APPLY SIMULATED RULES (Xeerarkaaga oo si hordhac ah u hawlgelaya)
+  // 3. APPLY SIMULATED RULES
   if (isMixedDabaaq) {
     const winnerFoorosToCarry = winnerScore.fooros;
 
-    // Dhammaan dabaaqyadii guuleystaha waxay u gudbaan qofka xiga ee
-    // aan degin; guuleystaha hal dabaaq ayaa ka furmaya.
     chainedDabaaqTarget.fooros = (chainedDabaaqTarget.fooros || 0) + winnerFoorosToCarry;
     addScoreDelta(deltas, chainedDabaaqTargetName, {
       fooros: winnerFoorosToCarry,
@@ -508,15 +500,19 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
     winnerScore.fooros = Math.max(0, winnerFoorosToCarry - 1);
     addScoreDelta(deltas, winnerName, { fooros: -1, net: 1 });
 
-    // Foorada hadda dhacday waxay hal guul ka goynaysaa dhibbanaha.
     victimScore.wins = Math.max(0, victimWins - 1);
     addScoreDelta(deltas, victimFooroName, { wins: -1, net: -1 });
 
   } else if (isNegativeDabaaq) {
-    // Negative Dabaaq: Tusaale ahaan Faarax (-3) iyo Jimcaale (-2) oo isu tagaya
-    const newVictimFooros = victimFooros + ownerFooros;
-    victimScore.fooros = newVictimFooros;
-    addScoreDelta(deltas, victimFooroName, { fooros: ownerFooros, net: -ownerFooros });
+    // ----------------------------------------------------
+    // XISAABTA SAXDA AH EE NEGATIVE DABAAQ:
+    // Milkiilaha fooradiisii waa la tirtirayaa (oo guul baa loo beddelayaa),
+    // Dhibbanaha waxaa lagu darayaa: foorooyinkiisii + milkiilaha fooradiisii + 1 (xarigga).
+    // ----------------------------------------------------
+    const addedFoorosToVictim = ownerFooros + 1;
+    
+    victimScore.fooros = victimFooros + addedFoorosToVictim;
+    addScoreDelta(deltas, victimFooroName, { fooros: addedFoorosToVictim, net: -addedFoorosToVictim });
 
     dabaaqOwnerScore.fooros = 0;
     dabaaqOwnerScore.wins   = (dabaaqOwnerScore.wins || 0) + 1;
@@ -557,7 +553,6 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
       addScoreDelta(deltas, victimFooroName, { fooros: 1, net: -1 });
     }
 
-    // Guuleystaha (Winner): Haddii uu fooro lahaa waa laga tirtirayaa, haddii kalena guul buu helayaa
     if (winnerScore.fooros > 0) {
       winnerScore.fooros--;
       addScoreDelta(deltas, winnerName, { fooros: -1, net: 1 });
@@ -577,12 +572,6 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
   }
 
   // 4. COMMIT TO ROOM AND SEASON SCORES
-  //
-  // room.sessionScores iyo season.scores waa inay noqdaan isla xogta.
-  // Haddii room-ka keliya la cusboonaysiiyo, broadcastSessionScores()
-  // marka gacanta xigta bilaabato wuxuu dib u soo dirayaa season.scores-kii
-  // hore (badanaa eber), taas oo panel-ka browser-ka ka tirtiraysa fooradii
-  // hadda la helay.
   season.scores = simulatedScores;
   room.sessionScores = season.scores;
   saveSessionsData();
@@ -594,9 +583,7 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
     });
   }
 
-  // 5. CHECK GAME / SEASON OVER (Haddii qof gaaray target-ka -5 ama +5)
-  // Xilligu wuxuu dhammaadaa marka fooradu gaarto target-ka oo keliya.
-  // Guuluhu ma dhammeeyaan xilliga; waxay kaliya ka muuqdaan natiijada.
+  // 5. CHECK GAME / SEASON OVER
   const loserEntry = Object.entries(room.sessionScores || {}).find(
     ([, score]) => (score.fooros || 0) >= target
   );
@@ -614,10 +601,7 @@ function simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFoo
 }
 
 function applyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFooroName = dabaaqOwnerName) {
-  // Simulation-ka ayaa ah xeerka keliya ee la dabaqayo, si Apply Dabaaq
-  // iyo Gameover ay mar walba u isticmaalaan natiijo isku mid ah.
   return simulateAndApplyDabaaq(io, room, winnerName, dabaaqOwnerName, victimFooroName);
-
 }
 
 function applyWinnerScore(winnerScore) {
